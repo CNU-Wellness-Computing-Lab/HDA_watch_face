@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<manifest xmlns="http://tizen.org/ns/packages" api-version="4.0" package="org.example.hda_watch_face" version="1.0.0">
+    <profile name="wearable"/>
+    <watch-application ambient-support="true" appid="org.example.hda_watch_face" exec="hda_watch_face">
+        <label>hda_watch_face</label>
+        <icon>hda_watch_face.png</icon>
+    </watch-application>
+    <privileges>
+        <privilege>http://tizen.org/privilege/mediastorage</privilege>
+        <privilege>http://tizen.org/privilege/systemmonitor</privilege>
+        <privilege>http://tizen.org/privilege/healthinfo</privilege>
+        <privilege>http://tizen.org/privilege/bluetooth</privilege>
+        <privilege>http://tizen.org/privilege/haptic</privilege>
+        <privilege>http://tizen.org/privilege/alarm.set</privilege>
+        <privilege>http://tizen.org/privilege/display</privilege>
+        <privilege>http://tizen.org/privilege/content.write</privilege>
+    </privileges>
+</manifest>

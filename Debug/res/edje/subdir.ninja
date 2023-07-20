@@ -1,0 +1,9 @@
+################################################################################
+# Automatically-generated file. Do not edit!
+################################################################################
+
+
+edctool = edje_cc
+edcflags = -id "C:/Users/user/workspace/HDA_watch_face/edje/images" -id "C:/tizen-studio/tools/edc-editor/share/enventor/images" -sd "C:/Users/user/workspace/HDA_watch_face/edje/sounds" -sd "C:/tizen-studio/tools/edc-editor/share/enventor/sounds" -fd "C:/Users/user/workspace/HDA_watch_face/edje/fonts" -fd "C:/tizen-studio/tools/edc-editor/share/enventor/fonts"
+
+build res/edje/main.edj: build_edc ../res/edje/main.edc 
