@@ -50,6 +50,10 @@ typedef struct appdata {
 	Evas_Object *win;
 	Evas_Object *conform;
 	Evas_Object *label;
+
+	Evas_Object *btn_screen;
+	Evas_Object *btn_report;
+	Evas_Object *btn_active;
 } appdata_s;
 
 #define TEXT_BUF_SIZE 256
@@ -70,6 +74,10 @@ sensor_h pedometer_handle = 0;
 sensor_h pressure_sensor_handle = 0;
 sensor_h sleep_monitor_handle = 0;
 
+bool hrm_is_launched = false;
+bool physics_is_launched = false;
+bool environment_is_launched = false;
+
 sqlite3 *sql_db;
 
 bool check_hrm_sensor_is_supported();
@@ -88,6 +96,8 @@ bool initialize_light_sensor();
 bool initialize_pedometer();
 bool initialize_pressure_sensor();
 bool initialize_sleep_monitor();
+
+static void _encore_thread_update_date(void *data, Ecore_Thread *thread);
 
 const char *sensor_privilege = "http://tizen.org/privilege/healthinfo";
 const char *mediastorage_privilege = "http://tizen.org/privilege/mediastorage";
@@ -164,7 +174,6 @@ static void update_watch(appdata_s *ad, watch_time_h watch_time, int ambient) {
 	}
 
 	elm_object_text_set(ad->label, watch_text);
-	dlog_print(DLOG_INFO, "TESTING", "update_watch");
 }
 
 static void create_base_gui(appdata_s *ad, int width, int height) {
@@ -203,6 +212,9 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 
 	/* Show window after base gui is set up */
 	evas_object_show(ad->win);
+
+	ecore_thread_feedback_run(_encore_thread_update_date, NULL, NULL, NULL, ad,
+	EINA_FALSE);
 }
 
 static bool app_create(int width, int height, void *data) {
@@ -246,7 +258,7 @@ static bool app_create(int width, int height, void *data) {
 	dlog_print(DLOG_DEBUG, LOG_TAG, "%s", __func__);
 
 	appdata_s *ad = data;
-	_create_base_gui(width, height);
+	create_base_gui(ad, width, height);
 
 	return true;
 }
@@ -262,8 +274,6 @@ static void app_pause(void *data) {
 
 static void app_resume(void *data) {
 	s_info.smooth_tick = false;
-
-	dlog_print(DLOG_ERROR, ACCELEROMETER_SENSOR_LOG_TAG, "APP_RESUME");
 
 	appdata_s *ad = data;
 	if (!check_and_request_sensor_permission()) {
@@ -336,158 +346,174 @@ static void app_terminate(void *data) {
 static void app_time_tick(watch_time_h watch_time, void *data) {
 	/* Called at each second while your app is visible. Update watch UI. */
 	appdata_s *ad = data;
-//	int hour = 0;
-//	int min = 0;
-//	int sec = 0;
-//	int year = 0;
-//	int month = 0;
-//	int day = 0;
-//	int day_of_week = 0;
-//	int battery_level = 0;
-
-	watch_time_get_hour(watch_time, &hour);
-	watch_time_get_minute(watch_time, &min);
-	watch_time_get_second(watch_time, &sec);
-	watch_time_get_day(watch_time, &day);
-	watch_time_get_month(watch_time, &month);
-	watch_time_get_year(watch_time, &year);
-	watch_time_get_day_of_week(watch_time, &day_of_week);
-
-	int ret = device_battery_get_percent(&battery_level);
-	if (ret != 0) {
-		dlog_print(DLOG_ERROR, LOG_TAG, "Failed to get battery level");
-		return;
-	}
-
-	_set_time(hour, min, sec);
-	_set_date(day, month, day_of_week);
-	_set_battery(battery_level);
+	update_watch(ad, watch_time, 0);
 }
 
 static void app_ambient_tick(watch_time_h watch_time, void *data) {
 	/* Called at each minute while the device is in ambient mode. Update watch UI. */
 	appdata_s *ad = data;
-	int hour = 0;
-	int min = 0;
-	int battery_level = 0;
-
-	watch_time_get_hour(watch_time, &hour);
-	watch_time_get_minute(watch_time, &min);
-
-	_set_time(hour, min, 0);
-
-	int ret = device_battery_get_percent(&battery_level);
-	if (ret != 0) {
-		dlog_print(DLOG_ERROR, LOG_TAG, "Failed to get battery level");
-		return;
-	}
-
-	_set_battery(battery_level);
+	update_watch(ad, watch_time, 1);
 }
 
 static void app_ambient_changed(bool ambient_mode, void *data) {
 	/* Update your watch UI to conform to the ambient mode */
-	s_info.ambient = ambient_mode;
-
-	Evas_Object *bg = NULL;
-	Evas_Object *object = NULL;
-	Evas_Object *hands = NULL;
-
-	bg = view_get_bg();
-	if (bg == NULL) {
-		dlog_print(DLOG_ERROR, LOG_TAG, "Failed to get bg");
-		return;
-	}
-
-	if (ambient_mode) // Ambient
-	{
-		// Set Watchface
-		set_object_background_image(bg,
-				(s_info.low_battery ? IMAGE_BG_AMBIENT_LOWBAT : IMAGE_BG_AMBIENT));
-
-		object = view_get_bg_plate();
-		evas_object_hide(object);
-
-		// Set Day
-		object = view_get_module_day_layout();
-		edje_object_signal_emit(object, "set_ambient", "");
-
-		if (s_info.low_battery) {
-			evas_object_hide(object);
-		}
-
-		//Set Battery Hand
-		hands = evas_object_data_get(bg, "__HANDS_BAT__");
-		evas_object_hide(hands);
-		hands = evas_object_data_get(bg, "__HANDS_BAT_SHADOW__");
-		evas_object_hide(hands);
-
-		//Set Minute Hand
-		set_object_background_image(evas_object_data_get(bg, "__HANDS_MIN__"),
-				(s_info.low_battery ?
-				IMAGE_HANDS_MIN_AMBIENT_LOWBAT :
-										IMAGE_HANDS_MIN_AMBIENT));
-
-		hands = evas_object_data_get(bg, "__HANDS_MIN_SHADOW__");
-		evas_object_hide(hands);
-
-		//Set Hour Hand
-		set_object_background_image(evas_object_data_get(bg, "__HANDS_HOUR__"),
-				(s_info.low_battery ?
-				IMAGE_HANDS_HOUR_AMBIENT_LOWBAT :
-										IMAGE_HANDS_HOUR_AMBIENT));
-
-		hands = evas_object_data_get(bg, "__HANDS_HOUR_SHADOW__");
-		evas_object_hide(hands);
-
-		//Set Second Hand
-		object = view_get_module_second_layout();
-		edje_object_signal_emit(object, "second_set_ambient", "");
-		evas_object_hide(object);
-
-		/*TODO: Commented out as smooth tick is re-implemented
-		 //Set Minute Hand
-		 object = view_get_module_minute_layout();
-		 edje_object_signal_emit(object,"minute_set_ambient","");
-		 */
-
-		s_info.smooth_tick = false;
-
-	} else // Non-ambient
-	{
-		// Set Watchface
-		set_object_background_image(bg, IMAGE_BG);
-		object = view_get_bg_plate();
-		evas_object_show(object);
-
-		//Set Day
-		object = view_get_module_day_layout();
-		evas_object_show(object);
-		edje_object_signal_emit(object, "set_default", "");
-
-		//Set Battery Hand
-		hands = evas_object_data_get(bg, "__HANDS_BAT__");
-		evas_object_show(hands);
-		hands = evas_object_data_get(bg, "__HANDS_BAT_SHADOW__");
-		evas_object_show(hands);
-
-		//Set Second Hand
-		hands = view_get_module_second_layout();
-		evas_object_show(hands);
-
-		//Set Minute Hand
-		set_object_background_image(evas_object_data_get(bg, "__HANDS_MIN__"),
-		IMAGE_HANDS_MIN);
-		hands = evas_object_data_get(bg, "__HANDS_MIN_SHADOW__");
-		evas_object_show(hands);
-
-		//Set Hour Hand
-		set_object_background_image(evas_object_data_get(bg, "__HANDS_HOUR__"),
-		IMAGE_HANDS_HOUR);
-		hands = evas_object_data_get(bg, "__HANDS_HOUR_SHADOW__");
-		evas_object_show(hands);
-	}
 }
+
+//static void app_time_tick(watch_time_h watch_time, void *data) {
+//	/* Called at each second while your app is visible. Update watch UI. */
+//	appdata_s *ad = data;
+////	int hour = 0;
+////	int min = 0;
+////	int sec = 0;
+////	int year = 0;
+////	int month = 0;
+////	int day = 0;
+////	int day_of_week = 0;
+////	int battery_level = 0;
+//
+//	watch_time_get_hour(watch_time, &hour);
+//	watch_time_get_minute(watch_time, &min);
+//	watch_time_get_second(watch_time, &sec);
+//	watch_time_get_day(watch_time, &day);
+//	watch_time_get_month(watch_time, &month);
+//	watch_time_get_year(watch_time, &year);
+//	watch_time_get_day_of_week(watch_time, &day_of_week);
+//
+//	int ret = device_battery_get_percent(&battery_level);
+//	if (ret != 0) {
+//		dlog_print(DLOG_ERROR, LOG_TAG, "Failed to get battery level");
+//		return;
+//	}
+//
+////	_set_time(hour, min, sec);
+////	_set_date(day, month, day_of_week);
+////	_set_battery(battery_level);
+//}
+//
+//static void app_ambient_tick(watch_time_h watch_time, void *data) {
+//	/* Called at each minute while the device is in ambient mode. Update watch UI. */
+//	appdata_s *ad = data;
+//	int hour = 0;
+//	int min = 0;
+//	int battery_level = 0;
+//
+//	watch_time_get_hour(watch_time, &hour);
+//	watch_time_get_minute(watch_time, &min);
+//
+//	_set_time(hour, min, 0);
+//
+//	int ret = device_battery_get_percent(&battery_level);
+//	if (ret != 0) {
+//		dlog_print(DLOG_ERROR, LOG_TAG, "Failed to get battery level");
+//		return;
+//	}
+//
+//	_set_battery(battery_level);
+//}
+//
+//static void app_ambient_changed(bool ambient_mode, void *data) {
+//	/* Update your watch UI to conform to the ambient mode */
+//	s_info.ambient = ambient_mode;
+//
+//	Evas_Object *bg = NULL;
+//	Evas_Object *object = NULL;
+//	Evas_Object *hands = NULL;
+//
+//	bg = view_get_bg();
+//	if (bg == NULL) {
+//		dlog_print(DLOG_ERROR, LOG_TAG, "Failed to get bg");
+//		return;
+//	}
+//
+//	if (ambient_mode) // Ambient
+//	{
+//		// Set Watchface
+//		set_object_background_image(bg,
+//				(s_info.low_battery ? IMAGE_BG_AMBIENT_LOWBAT : IMAGE_BG_AMBIENT));
+//
+//		object = view_get_bg_plate();
+//		evas_object_hide(object);
+//
+//		// Set Day
+//		object = view_get_module_day_layout();
+//		edje_object_signal_emit(object, "set_ambient", "");
+//
+//		if (s_info.low_battery) {
+//			evas_object_hide(object);
+//		}
+//
+//		//Set Battery Hand
+//		hands = evas_object_data_get(bg, "__HANDS_BAT__");
+//		evas_object_hide(hands);
+//		hands = evas_object_data_get(bg, "__HANDS_BAT_SHADOW__");
+//		evas_object_hide(hands);
+//
+//		//Set Minute Hand
+//		set_object_background_image(evas_object_data_get(bg, "__HANDS_MIN__"),
+//				(s_info.low_battery ?
+//				IMAGE_HANDS_MIN_AMBIENT_LOWBAT :
+//										IMAGE_HANDS_MIN_AMBIENT));
+//
+//		hands = evas_object_data_get(bg, "__HANDS_MIN_SHADOW__");
+//		evas_object_hide(hands);
+//
+//		//Set Hour Hand
+//		set_object_background_image(evas_object_data_get(bg, "__HANDS_HOUR__"),
+//				(s_info.low_battery ?
+//				IMAGE_HANDS_HOUR_AMBIENT_LOWBAT :
+//										IMAGE_HANDS_HOUR_AMBIENT));
+//
+//		hands = evas_object_data_get(bg, "__HANDS_HOUR_SHADOW__");
+//		evas_object_hide(hands);
+//
+//		//Set Second Hand
+//		object = view_get_module_second_layout();
+//		edje_object_signal_emit(object, "second_set_ambient", "");
+//		evas_object_hide(object);
+//
+//		/*TODO: Commented out as smooth tick is re-implemented
+//		 //Set Minute Hand
+//		 object = view_get_module_minute_layout();
+//		 edje_object_signal_emit(object,"minute_set_ambient","");
+//		 */
+//
+//		s_info.smooth_tick = false;
+//
+//	} else // Non-ambient
+//	{
+//		// Set Watchface
+//		set_object_background_image(bg, IMAGE_BG);
+//		object = view_get_bg_plate();
+//		evas_object_show(object);
+//
+//		//Set Day
+//		object = view_get_module_day_layout();
+//		evas_object_show(object);
+//		edje_object_signal_emit(object, "set_default", "");
+//
+//		//Set Battery Hand
+//		hands = evas_object_data_get(bg, "__HANDS_BAT__");
+//		evas_object_show(hands);
+//		hands = evas_object_data_get(bg, "__HANDS_BAT_SHADOW__");
+//		evas_object_show(hands);
+//
+//		//Set Second Hand
+//		hands = view_get_module_second_layout();
+//		evas_object_show(hands);
+//
+//		//Set Minute Hand
+//		set_object_background_image(evas_object_data_get(bg, "__HANDS_MIN__"),
+//		IMAGE_HANDS_MIN);
+//		hands = evas_object_data_get(bg, "__HANDS_MIN_SHADOW__");
+//		evas_object_show(hands);
+//
+//		//Set Hour Hand
+//		set_object_background_image(evas_object_data_get(bg, "__HANDS_HOUR__"),
+//		IMAGE_HANDS_HOUR);
+//		hands = evas_object_data_get(bg, "__HANDS_HOUR_SHADOW__");
+//		evas_object_show(hands);
+//	}
+//}
 
 static void watch_app_lang_changed(app_event_info_h event_info, void *user_data) {
 	/*APP_EVENT_LANGUAGE_CHANGED*/
@@ -836,6 +862,29 @@ static void _create_base_gui(int width, int height) {
 	if (module_sec_layout) {
 		view_set_module_property(module_sec_layout, 0, 0, 360, 360);
 		view_set_module_second_layout(module_sec_layout);
+	}
+}
+
+static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
+	appdata_s *ad = data;
+
+	while (1) {
+		int ret;
+		watch_time_h watch_time = NULL;
+		ret = watch_time_get_current_time(&watch_time);
+		if (ret != APP_ERROR_NONE)
+			dlog_print(DLOG_ERROR, LOG_TAG,
+					"failed to get current time. err = %d", ret);
+
+		watch_time_get_hour(watch_time, &hour);
+		watch_time_get_minute(watch_time, &min);
+		watch_time_get_second(watch_time, &sec);
+		watch_time_get_day(watch_time, &day);
+		watch_time_get_month(watch_time, &month);
+		watch_time_get_year(watch_time, &year);
+		watch_time_get_day_of_week(watch_time, &day_of_week);
+
+		sleep(1);
 	}
 }
 
@@ -1268,171 +1317,175 @@ bool check_and_request_sensor_permission() {
 	mediastorage_retval = ppm_check_permission(mediastorage_privilege,
 			&mediastorage_result);
 
-	if (health_retval == PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE) {
-		switch (health_result) {
-		case PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_ALLOW:
-			/* Update UI and start accessing protected functionality */
-			dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-					"The application has permission to use a sensor privilege.");
-
-			if (!check_hrm_sensor_listener_is_created()) {
-				if (!initialize_hrm_sensor()
-						|| !initialize_hrm_led_green_sensor()) {
-					dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
-							"Failed to get the handle for the default sensor of a HRM sensor.");
-					health_usable = false;
-				} else
-					dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-							"Succeeded in getting the handle for the default sensor of a HRM sensor.");
-
-				if (!create_hrm_sensor_listener(hrm_sensor_handle,
-						hrm_led_green_sensor_handle)) {
-					dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
-							"Failed to create a HRM sensor listener.");
-					health_usable = false;
-				} else
-					dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-							"Succeeded in creating a HRM sensor listener.");
-
-				if (!start_hrm_sensor_listener())
-					dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
-							"Failed to start observing the sensor events regarding a HRM sensor listener.");
-				else
-					dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-							"Succeeded in starting observing the sensor events regarding a HRM sensor listener.");
-			}
-			break;
-		case PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_DENY:
-			/* Show a message and terminate the application */
-			dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-					"Function ppm_check_permission() output result = PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_DENY");
-			dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
-					"The application doesn't have permission to use a sensor privilege.");
-			health_usable = false;
-			break;
-		case PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_ASK:
-			dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-					"The user has to be asked whether to grant permission to use a sensor privilege.");
-
-			if (!request_sensor_permission()) {
-				dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
-						"Failed to request a user's response to obtain permission for using the sensor privilege.");
-				health_usable = false;
-			} else {
+	if (hrm_is_launched != true) {
+		if (health_retval == PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE) {
+			switch (health_result) {
+			case PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_ALLOW:
+				/* Update UI and start accessing protected functionality */
 				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-						"Succeeded in requesting a user's response to obtain permission for using the sensor privilege.");
-				health_usable = true;
-			}
-			break;
-		}
-	} else {
-		/* retval != PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE */
-		/* Handle errors */
-		dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
-				"Function ppm_check_permission() return %s",
-				get_error_message(health_retval));
-		health_usable = false;
-	}
+						"The application has permission to use a sensor privilege.");
 
-	if (mediastorage_retval == PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE) {
-		if (mediastorage_result
-				== PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_ALLOW) {
-			dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-					"The application has permission to use a storage privilege.");
+				if (!check_hrm_sensor_listener_is_created()) {
+					if (!initialize_hrm_sensor()
+							|| !initialize_hrm_led_green_sensor()) {
+						dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+								"Failed to get the handle for the default sensor of a HRM sensor.");
+						health_usable = false;
+					} else
+						dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+								"Succeeded in getting the handle for the default sensor of a HRM sensor.");
 
-			if (!check_physics_sensor_listener_is_created()) {
-				if (!initialize_accelerometer_sensor()
-						|| !initialize_gravity_sensor()
-						|| !initialize_gyroscope_rotation_vector_sensor()
-						|| !initialize_gyroscope_sensor()
-						|| !initialize_linear_acceleration_sensor()) {
-					dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
-							"Failed to get the handle for the default sensor of a Physics sensor.");
-					physics_usable = false;
-				} else
-					dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
-							"Succeeded in getting the handle for the default sensor of a Physics sensor.");
+					if (!create_hrm_sensor_listener(hrm_sensor_handle,
+							hrm_led_green_sensor_handle)) {
+						dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+								"Failed to create a HRM sensor listener.");
+						health_usable = false;
+					} else
+						dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+								"Succeeded in creating a HRM sensor listener.");
 
-				if (!create_physics_sensor_listener(accelerometer_sensor_handle,
-						gravity_sensor_handle,
-						gyroscope_rotation_vector_sensor_hanlde,
-						gyroscope_sensor_handle,
-						linear_acceleration_sensor_handle)) {
-					dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
-							"Failed to create a Physics sensor listener.");
-					physics_usable = false;
-				} else
-					dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
-							"Succeeded in creating a Physics sensor listener.");
+					if (!start_hrm_sensor_listener())
+						dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+								"Failed to start observing the sensor events regarding a HRM sensor listener.");
+					else
+						dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+								"Succeeded in starting observing the sensor events regarding a HRM sensor listener.");
+				}
+				break;
+			case PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_DENY:
+				/* Show a message and terminate the application */
+				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+						"Function ppm_check_permission() output result = PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_DENY");
+				dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+						"The application doesn't have permission to use a sensor privilege.");
+				health_usable = false;
+				break;
+			case PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_ASK:
+				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+						"The user has to be asked whether to grant permission to use a sensor privilege.");
 
-				if (!start_physics_sensor_listener())
-					dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
-							"Failed to start observing the sensor events regarding a Physics sensor listener.");
-				else
-					dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
-							"Succeeded in starting observing the sensor events regarding a Physics sensor listener.");
-			}
-
-			if (!check_environment_sensor_listener_is_created()) {
-				if (!initialize_light_sensor() || !initialize_pedometer()
-						|| !initialize_pressure_sensor()
-						|| !initialize_sleep_monitor()) {
-					dlog_print(DLOG_ERROR, ENVIRONMENT_SENSOR_LOG_TAG,
-							"Failed to get the handle for the default sensor of a Environment sensor.");
-					environment_usable = false;
-				} else
-					dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
-							"Succeeded in getting the handle for the default sensor of a Environment sensor.");
-
-				if (!create_environment_sensor_listener(light_sensor_handle,
-						pedometer_handle, pressure_sensor_handle,
-						sleep_monitor_handle)) {
-					dlog_print(DLOG_ERROR, ENVIRONMENT_SENSOR_LOG_TAG,
-							"Failed to create a Environment sensor listener.");
-					environment_usable = false;
-				} else
-					dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
-							"Succeeded in creating a Environment sensor listener.");
-
-				if (!start_environment_sensor_listener())
-					dlog_print(DLOG_ERROR, ENVIRONMENT_SENSOR_LOG_TAG,
-							"Failed to start observing the sensor events regarding a Environment sensor listener.");
-				else
-					dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
-							"Succeeded in starting observing the sensor events regarding a Environment sensor listener.");
-			}
-		} else if (mediastorage_result
-				== PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_ASK) {
-			dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
-					"The user has to be asked whether to grant permission to use a sensor privilege.");
-
-			if (!request_sensor_permission()) {
-				dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
-						"Failed to request a user's response to obtain permission for using the sensor privilege.");
-				physics_usable = false;
-				environment_usable = false;
-			} else {
-				dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
-						"Succeeded in requesting a user's response to obtain permission for using the sensor privilege.");
-				physics_usable = true;
-				environment_usable = true;
+				if (!request_sensor_permission()) {
+					dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+							"Failed to request a user's response to obtain permission for using the sensor privilege.");
+					health_usable = false;
+				} else {
+					dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+							"Succeeded in requesting a user's response to obtain permission for using the sensor privilege.");
+					health_usable = true;
+				}
+				break;
 			}
 		} else {
-			dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
-					"Function ppm_check_permission() output result = PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_DENY");
+			/* retval != PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE */
+			/* Handle errors */
+			dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+					"Function ppm_check_permission() return %s",
+					get_error_message(health_retval));
+			health_usable = false;
+		}
+	}
+
+	if (physics_is_launched != true && environment_is_launched != true) {
+		if (mediastorage_retval == PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE) {
+			if (mediastorage_result
+					== PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_ALLOW) {
+				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+						"The application has permission to use a storage privilege.");
+
+				if (!check_physics_sensor_listener_is_created()) {
+					if (!initialize_accelerometer_sensor()
+							|| !initialize_gravity_sensor()
+							|| !initialize_gyroscope_rotation_vector_sensor()
+							|| !initialize_gyroscope_sensor()
+							|| !initialize_linear_acceleration_sensor()) {
+						dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
+								"Failed to get the handle for the default sensor of a Physics sensor.");
+						physics_usable = false;
+					} else
+						dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
+								"Succeeded in getting the handle for the default sensor of a Physics sensor.");
+
+					if (!create_physics_sensor_listener(
+							accelerometer_sensor_handle, gravity_sensor_handle,
+							gyroscope_rotation_vector_sensor_hanlde,
+							gyroscope_sensor_handle,
+							linear_acceleration_sensor_handle)) {
+						dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
+								"Failed to create a Physics sensor listener.");
+						physics_usable = false;
+					} else
+						dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
+								"Succeeded in creating a Physics sensor listener.");
+
+					if (!start_physics_sensor_listener())
+						dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
+								"Failed to start observing the sensor events regarding a Physics sensor listener.");
+					else
+						dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
+								"Succeeded in starting observing the sensor events regarding a Physics sensor listener.");
+				}
+
+				if (!check_environment_sensor_listener_is_created()) {
+					if (!initialize_light_sensor() || !initialize_pedometer()
+							|| !initialize_pressure_sensor()
+							|| !initialize_sleep_monitor()) {
+						dlog_print(DLOG_ERROR, ENVIRONMENT_SENSOR_LOG_TAG,
+								"Failed to get the handle for the default sensor of a Environment sensor.");
+						environment_usable = false;
+					} else
+						dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
+								"Succeeded in getting the handle for the default sensor of a Environment sensor.");
+
+					if (!create_environment_sensor_listener(light_sensor_handle,
+							pedometer_handle, pressure_sensor_handle,
+							sleep_monitor_handle)) {
+						dlog_print(DLOG_ERROR, ENVIRONMENT_SENSOR_LOG_TAG,
+								"Failed to create a Environment sensor listener.");
+						environment_usable = false;
+					} else
+						dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
+								"Succeeded in creating a Environment sensor listener.");
+
+					if (!start_environment_sensor_listener())
+						dlog_print(DLOG_ERROR, ENVIRONMENT_SENSOR_LOG_TAG,
+								"Failed to start observing the sensor events regarding a Environment sensor listener.");
+					else
+						dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
+								"Succeeded in starting observing the sensor events regarding a Environment sensor listener.");
+				}
+			} else if (mediastorage_result
+					== PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_ASK) {
+				dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
+						"The user has to be asked whether to grant permission to use a sensor privilege.");
+
+				if (!request_sensor_permission()) {
+					dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
+							"Failed to request a user's response to obtain permission for using the sensor privilege.");
+					physics_usable = false;
+					environment_usable = false;
+				} else {
+					dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
+							"Succeeded in requesting a user's response to obtain permission for using the sensor privilege.");
+					physics_usable = true;
+					environment_usable = true;
+				}
+			} else {
+				dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
+						"Function ppm_check_permission() output result = PRIVACY_PRIVILEGE_MANAGER_CHECK_RESULT_DENY");
+				dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
+						"The application doesn't have permission to use a sensor privilege.");
+				physics_usable = false;
+				environment_usable = false;
+			}
+		} else {
+			/* retval != PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE */
+			/* Handle errors */
 			dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
-					"The application doesn't have permission to use a sensor privilege.");
+					"Function ppm_check_permission() return %s",
+					get_error_message(mediastorage_retval));
 			physics_usable = false;
 			environment_usable = false;
 		}
-	} else {
-		/* retval != PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE */
-		/* Handle errors */
-		dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
-				"Function ppm_check_permission() return %s",
-				get_error_message(mediastorage_retval));
-		physics_usable = false;
-		environment_usable = false;
 	}
 
 	return health_usable && physics_usable && environment_usable;
@@ -1509,6 +1562,7 @@ void request_health_sensor_permission_response_callback(ppm_call_cause_e cause,
 			} else
 				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
 						"Succeeded in starting observing the sensor events regarding a HRM sensor listener.");
+			hrm_is_launched = true;
 			break;
 		case PRIVACY_PRIVILEGE_MANAGER_REQUEST_RESULT_DENY_FOREVER:
 			/* Show a message and terminate the application */
@@ -1602,6 +1656,8 @@ void request_physics_sensor_permission_response_callback(ppm_call_cause_e cause,
 				dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
 						"Succeeded in starting observing the sensor events regarding a Environment sensor listener.");
 
+			physics_is_launched = true;
+			environment_is_launched = true;
 			break;
 		case PRIVACY_PRIVILEGE_MANAGER_REQUEST_RESULT_DENY_FOREVER:
 			/* Show a message and terminate the application */
