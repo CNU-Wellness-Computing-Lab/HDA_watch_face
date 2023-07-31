@@ -51,10 +51,26 @@ typedef struct appdata {
 	Evas_Object *conform;
 	Evas_Object *label;
 
-	Evas_Object *btn_screen;
+	Evas_Object *basic_screen;
 	Evas_Object *btn_report;
+	Evas_Object *text_btn_report;
 	Evas_Object *btn_active;
+	Evas_Object *text_btn_active;
 } appdata_s;
+
+static void pushed_down_active(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info);
+static void pushed_up_active(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info);
+static Eina_Bool pushed_down_active_animate(void *user_data);
+static Eina_Bool pushed_up_active_animate(void *user_data);
+
+static void pushed_down_report(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info);
+static void pushed_up_report(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info);
+static Eina_Bool pushed_down_report_animate(void *user_data);
+static Eina_Bool pushed_up_report_animate(void *user_data);
 
 #define TEXT_BUF_SIZE 256
 
@@ -196,11 +212,58 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	elm_win_resize_object_add(ad->win, ad->conform);
 	evas_object_show(ad->conform);
 
-	/* Label*/
-	ad->label = elm_label_add(ad->conform);
-	evas_object_resize(ad->label, width, height / 3);
-	evas_object_move(ad->label, 0, height / 3);
+	ad->basic_screen = elm_grid_add(ad->conform);
+	elm_object_content_set(ad->conform, ad->basic_screen);
+	evas_object_show(ad->basic_screen);
+
+	ad->label = elm_label_add(ad->basic_screen);
+	elm_grid_pack(ad->basic_screen, ad->label, 0, 20, 100, 30);
 	evas_object_show(ad->label);
+
+	// 활성화 버튼
+	ad->btn_active = evas_object_rectangle_add(ad->basic_screen);
+	evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
+	elm_grid_pack(ad->basic_screen, ad->btn_active, 0, 50, 50, 50);
+	evas_object_show(ad->btn_active);
+	ad->text_btn_active = elm_label_add(ad->basic_screen);
+	evas_object_color_set(ad->text_btn_active, 255, 255, 255, 255);
+	elm_object_text_set(ad->text_btn_active,
+			"<align=center><font_size=30><b>활성화</b></font></align>");
+	elm_grid_pack(ad->basic_screen, ad->text_btn_active, 0, 65, 50, 10);
+	evas_object_show(ad->text_btn_active);
+	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_DOWN,
+			pushed_down_active, ad);
+	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_active, ad);
+	evas_object_event_callback_add(ad->text_btn_active,
+			EVAS_CALLBACK_MOUSE_DOWN, pushed_down_active, ad);
+	evas_object_event_callback_add(ad->text_btn_active, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_active, ad);
+
+	// 기록 버튼
+	ad->btn_report = evas_object_rectangle_add(ad->basic_screen);
+	evas_object_color_set(ad->btn_report, 0, 0, 0, 255);
+	elm_grid_pack(ad->basic_screen, ad->btn_report, 50, 50, 50, 50);
+	evas_object_show(ad->btn_report);
+	ad->text_btn_report = elm_label_add(ad->basic_screen);
+	evas_object_color_set(ad->text_btn_report, 255, 255, 255, 255);
+	elm_object_text_set(ad->text_btn_report,
+			"<align=center><font_size=30><b>기록</b></font></align>");
+	elm_grid_pack(ad->basic_screen, ad->text_btn_report, 50, 65, 50, 10);
+	evas_object_show(ad->text_btn_report);
+	evas_object_event_callback_add(ad->btn_report, EVAS_CALLBACK_MOUSE_DOWN,
+			pushed_down_report, ad);
+	evas_object_event_callback_add(ad->btn_report, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_report, ad);
+	evas_object_event_callback_add(ad->text_btn_report,
+			EVAS_CALLBACK_MOUSE_DOWN, pushed_down_report, ad);
+	evas_object_event_callback_add(ad->text_btn_report, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_report, ad);
+
+//	ad->btn_report = elm_button_add(ad->basic_screen);
+//	elm_object_text_set(ad->btn_report, "기록");
+//	elm_grid_pack(ad->basic_screen, ad->btn_report, 50, 50, 50, 50);
+//	evas_object_show(ad->btn_report);
 
 	ret = watch_time_get_current_time(&watch_time);
 	if (ret != APP_ERROR_NONE)
@@ -276,13 +339,13 @@ static void app_resume(void *data) {
 	s_info.smooth_tick = false;
 
 	appdata_s *ad = data;
-	if (!check_and_request_sensor_permission()) {
-		dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
-				"Failed to check if an application has permission to use the sensor privilege.");
-//		ui_app_exit();
-	} else
-		dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
-				"Succeeded in checking if an application has permission to use the sensor privilege.");
+//	if (!check_and_request_sensor_permission()) {
+//		dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+//				"Failed to check if an application has permission to use the sensor privilege.");
+////		ui_app_exit();
+//	} else
+//		dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//				"Succeeded in checking if an application has permission to use the sensor privilege.");
 }
 
 static void app_terminate(void *data) {
@@ -863,6 +926,51 @@ static void _create_base_gui(int width, int height) {
 		view_set_module_property(module_sec_layout, 0, 0, 360, 360);
 		view_set_module_second_layout(module_sec_layout);
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+
+static void pushed_down_active(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info) {
+	appdata_s *ad = user_data;
+	ecore_animator_add(pushed_down_active_animate, ad);
+}
+static void pushed_up_active(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info) {
+	appdata_s *ad = user_data;
+	ecore_animator_add(pushed_up_active_animate, ad);
+}
+static Eina_Bool pushed_down_active_animate(void *user_data) {
+	appdata_s *ad = user_data;
+	evas_object_color_set(ad->btn_active, 60, 60, 60, 255);
+	return ECORE_CALLBACK_RENEW;
+}
+static Eina_Bool pushed_up_active_animate(void *user_data) {
+	appdata_s *ad = user_data;
+	evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
+	return ECORE_CALLBACK_RENEW;
+}
+
+static void pushed_down_report(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info) {
+	appdata_s *ad = user_data;
+	ecore_animator_add(pushed_down_report_animate, ad);
+}
+static void pushed_up_report(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info) {
+	appdata_s *ad = user_data;
+	ecore_animator_add(pushed_up_report_animate, ad);
+}
+static Eina_Bool pushed_down_report_animate(void *user_data) {
+	appdata_s *ad = user_data;
+	evas_object_color_set(ad->btn_report, 60, 60, 60, 255);
+	return ECORE_CALLBACK_RENEW;
+}
+static Eina_Bool pushed_up_report_animate(void *user_data) {
+	appdata_s *ad = user_data;
+	evas_object_color_set(ad->btn_report, 0, 0, 0, 255);
+	return ECORE_CALLBACK_RENEW;
 }
 
 static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
