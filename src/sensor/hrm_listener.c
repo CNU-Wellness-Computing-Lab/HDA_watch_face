@@ -2,16 +2,19 @@
 #include "hda_watch_face.h"
 #include "bluetooth/gatt/characteristic.h"
 #include <tools/sqlite_helper.h>
+#include <time.h>
 
 sensor_listener_h hrm_sensor_listener_handle = 0;
 sensor_listener_h hrm_led_green_sensor_listener_handle = 0;
 
-unsigned int hrm_sensor_listener_event_update_interval_ms = 1000;
+unsigned int hrm_sensor_listener_event_update_interval_ms = 3000;
 
 static void hrm_sensor_listener_event_callback(sensor_h sensor,
 		sensor_event_s events[], void *user_data);
 static void hrm_led_green_sensor_listener_event_callback(sensor_h sensor,
 		sensor_event_s events[], void *user_data);
+
+int GetTimeT(int year, int month, int day, int hour, int minute, int second);
 
 bool create_hrm_sensor_listener(sensor_h hrm_sensor_handle,
 		sensor_h hrm_led_green_sensor_handle) {
@@ -142,10 +145,21 @@ bool set_hrm_led_green_sensor_listener_event_callback() {
 	return true;
 }
 
+int GetTimeT(int year, int month, int day, int hour, int minute, int second) {
+	struct tm t = { 0 };
+	t.tm_year = year - 1900;
+	t.tm_mon = month - 1;
+	t.tm_mday = day;
+	t.tm_hour = hour;
+	t.tm_min = minute;
+	t.tm_sec = second;
+
+	return mktime(&t);
+}
+
 /////////// Setting sensor listener event callback ///////////
 void hrm_sensor_listener_event_callback(sensor_h sensor,
 		sensor_event_s events[], void *user_data) {
-
 	char date_buf[64];
 	snprintf(date_buf, 64, "%d-%d-%d %d:%d:%d", year, month, day, hour, min,
 			sec);
@@ -160,6 +174,16 @@ void hrm_sensor_listener_event_callback(sensor_h sensor,
 			events[0].timestamp, value);
 	append_file(filepath, msg_data);
 
+	if(value > 20){
+		final_report_year = year;
+		final_report_month = month;
+		final_report_day = day;
+		final_report_hour = hour;
+		final_report_min = min;
+		final_report_sec = sec;
+		dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+					"%d %d %d %d %d %d", year, month, day, hour, min, sec);
+	}
 	//	if(!set_gatt_characteristic_value(value))
 	//		dlog_print(DLOG_ERROR, SENSOR_LOG_TAG, "%s/%s/%d: Failed to update the value of a characteristic's GATT handle.", __FILE__, __func__, __LINE__);
 	//	else

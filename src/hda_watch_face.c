@@ -21,6 +21,7 @@
 #include <dlog.h>
 #include <device/battery.h>
 #include <app_control.h>
+#include <time.h>
 
 #include "view.h"
 #include "data.h"
@@ -47,6 +48,15 @@ int day = 0;
 int day_of_week = 0;
 int battery_level = 0;
 
+int final_report_hour = 0;
+int final_report_min = 0;
+int final_report_sec = 0;
+int final_report_year = 0;
+int final_report_month = 0;
+int final_report_day = 0;
+
+int alert_postpone_delay_time = 1800;
+
 typedef struct appdata {
 	Evas_Object *win;
 	Evas_Object *conform;
@@ -57,6 +67,13 @@ typedef struct appdata {
 	Evas_Object *text_btn_report;
 	Evas_Object *btn_active;
 	Evas_Object *text_btn_active;
+
+	Evas_Object *alert_screen;
+	Evas_Object *alert;
+	Evas_Object *btn_postpone_30;
+	Evas_Object *text_btn_postpone_30;
+	Evas_Object *btn_postpone_90;
+	Evas_Object *text_btn_postpone_90;
 } appdata_s;
 
 static void pushed_down_active(void *user_data, Evas* e, Evas_Object *obj,
@@ -72,6 +89,20 @@ static void pushed_up_report(void *user_data, Evas* e, Evas_Object *obj,
 		void *event_info);
 static Eina_Bool pushed_down_report_animate(void *user_data);
 static Eina_Bool pushed_up_report_animate(void *user_data);
+
+static void pushed_down_postpone_30(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info);
+static void pushed_up_postpone_30(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info);
+static Eina_Bool pushed_down_postpone_30_animate(void *user_data);
+static Eina_Bool pushed_up_postpone_30_animate(void *user_data);
+
+static void pushed_down_postpone_90(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info);
+static void pushed_up_postpone_90(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info);
+static Eina_Bool pushed_down_postpone_90_animate(void *user_data);
+static Eina_Bool pushed_up_postpone_90_animate(void *user_data);
 
 #define TEXT_BUF_SIZE 256
 
@@ -119,16 +150,19 @@ bool initialize_pressure_sensor();
 bool initialize_sleep_monitor();
 
 static void _encore_thread_update_date(void *data, Ecore_Thread *thread);
+static void _set_alert_visible(void *data, Ecore_Thread *thread, void *msgdata);
+static void _encore_thread_check_wear(void*date, Ecore_Thread *thread);
+//int GetTimeT(int year, int month, int day, int hour, int minute, int second);
 
 const char *sensor_privilege = "http://tizen.org/privilege/healthinfo";
 const char *mediastorage_privilege = "http://tizen.org/privilege/mediastorage";
 
 bool check_and_request_sensor_permission();
-bool request_hrm_sensor_permission();
+bool request_sensor_permission();
 bool request_mediastorage_permission();
-void request_health_sensor_permission_response_callback(ppm_call_cause_e cause,
+void request_sensor_permission_response_callback(ppm_call_cause_e cause,
 		ppm_request_result_e result, const char *privilege, void *user_data);
-void request_physics_sensor_permission_response_callback(ppm_call_cause_e cause,
+void request_mediastorage_permission_response_callback(ppm_call_cause_e cause,
 		ppm_request_result_e result, const char *privilege, void *user_data);
 
 app_control_h app_controller;
@@ -223,35 +257,35 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	evas_object_show(ad->label);
 
 	// 활성화 버튼
-	ad->btn_active = evas_object_rectangle_add(ad->basic_screen);
-	evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
-	elm_grid_pack(ad->basic_screen, ad->btn_active, 0, 50, 50, 50);
-	evas_object_show(ad->btn_active);
-	ad->text_btn_active = elm_label_add(ad->basic_screen);
-	evas_object_color_set(ad->text_btn_active, 255, 255, 255, 255);
-	elm_object_text_set(ad->text_btn_active,
-			"<align=center><font_size=30><b>활성화</b></font></align>");
-	elm_grid_pack(ad->basic_screen, ad->text_btn_active, 0, 65, 50, 10);
-	evas_object_show(ad->text_btn_active);
-	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_DOWN,
-			pushed_down_active, ad);
-	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_UP,
-			pushed_up_active, ad);
-	evas_object_event_callback_add(ad->text_btn_active,
-			EVAS_CALLBACK_MOUSE_DOWN, pushed_down_active, ad);
-	evas_object_event_callback_add(ad->text_btn_active, EVAS_CALLBACK_MOUSE_UP,
-			pushed_up_active, ad);
+//	ad->btn_active = evas_object_rectangle_add(ad->basic_screen);
+//	evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
+//	elm_grid_pack(ad->basic_screen, ad->btn_active, 0, 50, 50, 50);
+//	evas_object_show(ad->btn_active);
+//	ad->text_btn_active = elm_label_add(ad->basic_screen);
+//	evas_object_color_set(ad->text_btn_active, 255, 255, 255, 255);
+//	elm_object_text_set(ad->text_btn_active,
+//			"<align=center><font_size=30><b>활성화</b></font></align>");
+//	elm_grid_pack(ad->basic_screen, ad->text_btn_active, 0, 65, 50, 10);
+//	evas_object_show(ad->text_btn_active);
+//	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_DOWN,
+//			pushed_down_active, ad);
+//	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_UP,
+//			pushed_up_active, ad);
+//	evas_object_event_callback_add(ad->text_btn_active,
+//			EVAS_CALLBACK_MOUSE_DOWN, pushed_down_active, ad);
+//	evas_object_event_callback_add(ad->text_btn_active, EVAS_CALLBACK_MOUSE_UP,
+//			pushed_up_active, ad);
 
 	// 기록 버튼
 	ad->btn_report = evas_object_rectangle_add(ad->basic_screen);
 	evas_object_color_set(ad->btn_report, 0, 0, 0, 255);
-	elm_grid_pack(ad->basic_screen, ad->btn_report, 50, 50, 50, 50);
+	elm_grid_pack(ad->basic_screen, ad->btn_report, 0, 50, 100, 50);
 	evas_object_show(ad->btn_report);
 	ad->text_btn_report = elm_label_add(ad->basic_screen);
 	evas_object_color_set(ad->text_btn_report, 255, 255, 255, 255);
 	elm_object_text_set(ad->text_btn_report,
 			"<align=center><font_size=30><b>기록</b></font></align>");
-	elm_grid_pack(ad->basic_screen, ad->text_btn_report, 50, 65, 50, 10);
+	elm_grid_pack(ad->basic_screen, ad->text_btn_report, 0, 65, 100, 10);
 	evas_object_show(ad->text_btn_report);
 	evas_object_event_callback_add(ad->btn_report, EVAS_CALLBACK_MOUSE_DOWN,
 			pushed_down_report, ad);
@@ -262,10 +296,67 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	evas_object_event_callback_add(ad->text_btn_report, EVAS_CALLBACK_MOUSE_UP,
 			pushed_up_report, ad);
 
-//	ad->btn_report = elm_button_add(ad->basic_screen);
-//	elm_object_text_set(ad->btn_report, "기록");
-//	elm_grid_pack(ad->basic_screen, ad->btn_report, 50, 50, 50, 50);
-//	evas_object_show(ad->btn_report);
+	ad->label = elm_label_add(ad->basic_screen);
+	elm_grid_pack(ad->basic_screen, ad->label, 0, 20, 100, 30);
+	evas_object_show(ad->label);
+
+
+
+	ad->alert_screen = elm_grid_add(ad->win);
+	elm_object_content_set(ad->win, ad->alert_screen);
+	evas_object_show(ad->alert_screen);
+
+	Evas_Object *alert_bg = elm_bg_add(ad->alert_screen);
+	elm_bg_color_set(alert_bg, 0, 0, 0);
+	elm_grid_pack(ad->alert_screen, alert_bg, 0, 0, 100, 100);
+	evas_object_show(alert_bg);
+
+	// 30
+	ad->btn_postpone_30 = evas_object_rectangle_add(ad->alert_screen);
+	evas_object_color_set(ad->btn_postpone_30, 166, 255, 166, 255);
+	elm_grid_pack(ad->alert_screen, ad->btn_postpone_30, 0, 50, 50, 50);
+	evas_object_show(ad->btn_postpone_30);
+	ad->text_btn_postpone_30 = elm_label_add(ad->alert_screen);
+	evas_object_color_set(ad->text_btn_postpone_30, 0, 0, 0, 255);
+	elm_object_text_set(ad->text_btn_postpone_30,
+			"<align=center><font_size=30><b>30분 후 알림</b></font></align>");
+	elm_grid_pack(ad->alert_screen, ad->text_btn_postpone_30, 0, 65, 50, 10);
+	evas_object_show(ad->text_btn_postpone_30);
+	evas_object_event_callback_add(ad->btn_postpone_30, EVAS_CALLBACK_MOUSE_DOWN,
+			pushed_down_postpone_30, ad);
+	evas_object_event_callback_add(ad->btn_postpone_30, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_postpone_30, ad);
+	evas_object_event_callback_add(ad->text_btn_postpone_30,
+			EVAS_CALLBACK_MOUSE_DOWN, pushed_down_postpone_30, ad);
+	evas_object_event_callback_add(ad->text_btn_postpone_30, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_postpone_30, ad);
+
+	// 90
+	ad->btn_postpone_90 = evas_object_rectangle_add(ad->alert_screen);
+	evas_object_color_set(ad->btn_postpone_90, 166, 200, 255, 255);
+	elm_grid_pack(ad->alert_screen, ad->btn_postpone_90, 50, 50, 50, 50);
+	evas_object_show(ad->btn_postpone_90);
+	ad->text_btn_postpone_90 = elm_label_add(ad->alert_screen);
+	evas_object_color_set(ad->text_btn_postpone_90, 0, 0, 0, 255);
+	elm_object_text_set(ad->text_btn_postpone_90,
+			"<align=center><font_size=30><b>90분 후 알림</b></font></align>");
+	elm_grid_pack(ad->alert_screen, ad->text_btn_postpone_90, 50, 65, 50, 10);
+	evas_object_show(ad->text_btn_postpone_90);
+	evas_object_event_callback_add(ad->btn_postpone_90, EVAS_CALLBACK_MOUSE_DOWN,
+			pushed_down_postpone_90, ad);
+	evas_object_event_callback_add(ad->btn_postpone_90, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_postpone_90, ad);
+	evas_object_event_callback_add(ad->text_btn_postpone_90,
+			EVAS_CALLBACK_MOUSE_DOWN, pushed_down_postpone_90, ad);
+	evas_object_event_callback_add(ad->text_btn_postpone_90, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_postpone_90, ad);
+
+	ad->alert = elm_label_add(ad->alert_screen);
+	elm_grid_pack(ad->alert_screen, ad->alert, 0, 20, 100, 30);
+	elm_object_text_set(ad->alert, "<align=center><font_size=30><b>시계의 착용 상태를<br>확인해주세요.</b></font></align>");
+	evas_object_show(ad->alert);
+
+	evas_object_hide(ad->alert_screen);
 
 	ret = watch_time_get_current_time(&watch_time);
 	if (ret != APP_ERROR_NONE)
@@ -279,6 +370,8 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	evas_object_show(ad->win);
 
 	ecore_thread_feedback_run(_encore_thread_update_date, NULL, NULL, NULL, ad,
+	EINA_FALSE);
+	ecore_thread_feedback_run(_encore_thread_check_wear, _set_alert_visible, NULL, NULL, ad,
 	EINA_FALSE);
 }
 
@@ -338,6 +431,7 @@ static void app_pause(void *data) {
 }
 
 static void app_resume(void *data) {
+	feedback_initialize();
 	s_info.smooth_tick = false;
 
 	appdata_s *ad = data;
@@ -350,6 +444,7 @@ static void app_resume(void *data) {
 }
 
 static void app_terminate(void *data) {
+	feedback_deinitialize();
 	view_destroy_base_gui();
 
 	int retval;
@@ -527,6 +622,78 @@ static Eina_Bool pushed_up_report_animate(void *user_data) {
 	return ECORE_CALLBACK_RENEW;
 }
 
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+
+static void pushed_down_postpone_30(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info) {
+	appdata_s *ad = user_data;
+	ecore_animator_add(pushed_down_postpone_30_animate, ad);
+}
+static void pushed_up_postpone_30(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info) {
+	appdata_s *ad = user_data;
+	alert_postpone_delay_time = 1800;
+
+	final_report_year = year;
+	final_report_month = month;
+	final_report_day = day;
+	final_report_hour = hour;
+	final_report_min = min;
+	final_report_sec = sec;
+	dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG, "%d %d %d %d %d %d", year, month,
+			day, hour, min, sec);
+
+	evas_object_hide(ad->alert_screen);
+	ecore_animator_add(pushed_up_postpone_30_animate, ad);
+}
+static Eina_Bool pushed_down_postpone_30_animate(void *user_data) {
+	appdata_s *ad = user_data;
+	evas_object_color_set(ad->btn_active, 87, 134, 87, 255);
+	return ECORE_CALLBACK_RENEW;
+}
+static Eina_Bool pushed_up_postpone_30_animate(void *user_data) {
+	appdata_s *ad = user_data;
+	evas_object_color_set(ad->btn_active, 166, 255, 166, 255);
+	return ECORE_CALLBACK_RENEW;
+}
+
+static void pushed_down_postpone_90(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info) {
+	appdata_s *ad = user_data;
+	ecore_animator_add(pushed_down_postpone_90_animate, ad);
+}
+static void pushed_up_postpone_90(void *user_data, Evas* e, Evas_Object *obj,
+		void *event_info) {
+	appdata_s *ad = user_data;
+	alert_postpone_delay_time = 5400;
+
+	final_report_year = year;
+	final_report_month = month;
+	final_report_day = day;
+	final_report_hour = hour;
+	final_report_min = min;
+	final_report_sec = sec;
+	dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG, "%d %d %d %d %d %d", year, month,
+			day, hour, min, sec);
+
+	evas_object_hide(ad->alert_screen);
+	ecore_animator_add(pushed_up_postpone_90_animate, ad);
+}
+static Eina_Bool pushed_down_postpone_90_animate(void *user_data) {
+	appdata_s *ad = user_data;
+	evas_object_color_set(ad->btn_report, 87, 105, 134, 255);
+	return ECORE_CALLBACK_RENEW;
+}
+static Eina_Bool pushed_up_postpone_90_animate(void *user_data) {
+	appdata_s *ad = user_data;
+	evas_object_color_set(ad->btn_report, 166, 200, 255, 255);
+	return ECORE_CALLBACK_RENEW;
+}
+
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+
 static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 	appdata_s *ad = data;
 
@@ -545,6 +712,37 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 		watch_time_get_year(watch_time, &year);
 		watch_time_get_day_of_week(watch_time, &day_of_week);
 
+		sleep(1);
+	}
+}
+
+static void _set_alert_visible(void *data, Ecore_Thread *thread, void *msgdata) {
+	appdata_s *ad = data;
+	evas_object_show(ad->alert_screen);
+}
+static void _encore_thread_check_wear(void *data, Ecore_Thread *thread) {
+	appdata_s *ad = data;
+
+	while (1) {
+		if(final_report_year == 0 || final_report_month == 0 || final_report_day == 0){
+			sleep(1);
+			continue;
+		}
+
+		unsigned long final_report_ts = (((((final_report_year * 12 + final_report_month) * 30) + final_report_day) * 24 + final_report_hour) * 60 + final_report_min) * 60 + final_report_sec;
+		unsigned long current_ts = (((((year * 12 + month) * 30) + day) * 24 + hour) * 60 + min) * 60 + sec;
+
+		if (final_report_ts <= current_ts - alert_postpone_delay_time - 600) {
+			ecore_thread_feedback(thread, (void*) (uintptr_t) final_report_ts);
+		}
+		else if(final_report_ts <= current_ts - alert_postpone_delay_time){
+			ecore_thread_feedback(thread, (void*) (uintptr_t) final_report_ts);
+//			evas_object_show(ad->alert_screen);
+			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+		}
+		else{
+			evas_object_hide(ad->alert_screen);
+		}
 		sleep(1);
 	}
 }
@@ -1032,7 +1230,7 @@ bool check_and_request_sensor_permission() {
 						"The user has to be asked whether to grant permission to use a sensor privilege.");
 
 				hrm_launched_state = REQUEST;
-				if (!request_hrm_sensor_permission()) {
+				if (!request_sensor_permission()) {
 					dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
 							"Failed to request a user's response to obtain permission for using the sensor privilege.");
 					health_usable = false;
@@ -1093,13 +1291,12 @@ bool check_and_request_sensor_permission() {
 						dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
 								"Succeeded in creating a Physics sensor listener.");
 
-					if (!start_physics_sensor_listener()){
+					if (!start_physics_sensor_listener()) {
 						dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
 								"Failed to start observing the sensor events regarding a Physics sensor listener.");
 						physics_usable = false;
 						physics_launched_state = NONE;
-					}
-					else
+					} else
 						dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
 								"Succeeded in starting observing the sensor events regarding a Physics sensor listener.");
 				}
@@ -1128,13 +1325,12 @@ bool check_and_request_sensor_permission() {
 						dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
 								"Succeeded in creating a Environment sensor listener.");
 
-					if (!start_environment_sensor_listener()){
+					if (!start_environment_sensor_listener()) {
 						dlog_print(DLOG_ERROR, ENVIRONMENT_SENSOR_LOG_TAG,
 								"Failed to start observing the sensor events regarding a Environment sensor listener.");
 						environment_usable = false;
 						environment_launched_state = NONE;
-					}
-					else
+					} else
 						dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
 								"Succeeded in starting observing the sensor events regarding a Environment sensor listener.");
 				}
@@ -1187,10 +1383,10 @@ bool check_and_request_sensor_permission() {
 	return health_usable && physics_usable && environment_usable;
 }
 
-bool request_hrm_sensor_permission() {
+bool request_sensor_permission() {
 	int health_retval;
 	health_retval = ppm_request_permission(sensor_privilege,
-				request_health_sensor_permission_response_callback, NULL);
+			request_sensor_permission_response_callback, NULL);
 
 	if (health_retval == PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE) {
 		return true;
@@ -1204,15 +1400,15 @@ bool request_hrm_sensor_permission() {
 		return false;
 	}
 }
-bool request_mediastorage_permission(){
+bool request_mediastorage_permission() {
 	int mediastorage_retval;
 	mediastorage_retval = ppm_request_permission(mediastorage_privilege,
-			request_physics_sensor_permission_response_callback, NULL);
+			request_mediastorage_permission_response_callback, NULL);
 
 	if (mediastorage_retval == PRIVACY_PRIVILEGE_MANAGER_ERROR_NONE) {
 		return true;
 	} else if (mediastorage_retval
-					== PRIVACY_PRIVILEGE_MANAGER_ERROR_ALREADY_IN_PROGRESS) {
+			== PRIVACY_PRIVILEGE_MANAGER_ERROR_ALREADY_IN_PROGRESS) {
 		return true;
 	} else {
 		dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
@@ -1222,8 +1418,82 @@ bool request_mediastorage_permission(){
 	}
 }
 
-void request_health_sensor_permission_response_callback(ppm_call_cause_e cause,
+void request_sensor_permission_response_callback(ppm_call_cause_e cause,
 		ppm_request_result_e result, const char *privilege, void *user_data) {
+	dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+			"request_health_sensor_permission_response_callback");
+//	if (cause == PRIVACY_PRIVILEGE_MANAGER_CALL_CAUSE_ERROR) {
+//		/* Log and handle errors */
+//		dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//				"Function request_sensor_permission_response_callback() output cause = PRIVACY_PRIVILEGE_MANAGER_CALL_CAUSE_ERROR");
+//		dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+//				"Function request_sensor_permission_response_callback() was called because of an error.");
+//	} else {
+//		dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//				"Function request_sensor_permission_response_callback() was called with a valid answer.");
+//
+//		switch (result) {
+//		case PRIVACY_PRIVILEGE_MANAGER_REQUEST_RESULT_ALLOW_FOREVER:
+//			/* Update UI and start accessing protected functionality */
+//			dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//					"The user granted permission to use a sensor privilege for an indefinite period of time.");
+//
+//			hrm_launched_state = LAUNCHED;
+//			if (!initialize_hrm_sensor()
+//					|| !initialize_hrm_led_green_sensor()) {
+//				dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+//						"Failed to get the handle for the default sensor of a HRM sensor.");
+//				hrm_launched_state = NONE;
+////				ui_app_exit();
+//			} else
+//				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//						"Succeeded in getting the handle for the default sensor of a HRM sensor.");
+//
+//			if (!create_hrm_sensor_listener(hrm_sensor_handle,
+//					hrm_led_green_sensor_handle)) {
+//				dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+//						"Failed to create a HRM sensor listener.");
+//				hrm_launched_state = NONE;
+////				ui_app_exit();
+//			} else
+//				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//						"Succeeded in creating a HRM sensor listener.");
+//
+//			if (!start_hrm_sensor_listener()) {
+//				dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+//						"Failed to start observing the sensor events regarding a HRM sensor listener.");
+//				hrm_launched_state = NONE;
+////				ui_app_exit();
+//			} else
+//				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//						"Succeeded in starting observing the sensor events regarding a HRM sensor listener.");
+//			break;
+//		case PRIVACY_PRIVILEGE_MANAGER_REQUEST_RESULT_DENY_FOREVER:
+//			/* Show a message and terminate the application */
+//			dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//					"Function request_sensor_permission_response_callback() output result = PRIVACY_PRIVILEGE_MANAGER_REQUEST_RESULT_DENY_FOREVER");
+//			dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+//					"The user denied granting permission to use a sensor privilege for an indefinite period of time.");
+//			hrm_launched_state = NONE;
+////			ui_app_exit();
+//			break;
+//		case PRIVACY_PRIVILEGE_MANAGER_REQUEST_RESULT_DENY_ONCE:
+//			/* Show a message with explanation */
+//			dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
+//					"Function request_sensor_permission_response_callback() output result = PRIVACY_PRIVILEGE_MANAGER_REQUEST_RESULT_DENY_ONCE");
+//			dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
+//					"The user denied granting permission to use a sensor privilege once.");
+//			hrm_launched_state = NONE;
+////			ui_app_exit();
+//			break;
+//		}
+//	}
+}
+
+void request_mediastorage_permission_response_callback(ppm_call_cause_e cause,
+		ppm_request_result_e result, const char *privilege, void *user_data) {
+	dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
+			"request_physics_sensor_permission_response_callback");
 	if (cause == PRIVACY_PRIVILEGE_MANAGER_CALL_CAUSE_ERROR) {
 		/* Log and handle errors */
 		dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
@@ -1246,7 +1516,7 @@ void request_health_sensor_permission_response_callback(ppm_call_cause_e cause,
 				dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
 						"Failed to get the handle for the default sensor of a HRM sensor.");
 				hrm_launched_state = NONE;
-//				ui_app_exit();
+				//				ui_app_exit();
 			} else
 				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
 						"Succeeded in getting the handle for the default sensor of a HRM sensor.");
@@ -1256,7 +1526,7 @@ void request_health_sensor_permission_response_callback(ppm_call_cause_e cause,
 				dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
 						"Failed to create a HRM sensor listener.");
 				hrm_launched_state = NONE;
-//				ui_app_exit();
+				//				ui_app_exit();
 			} else
 				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
 						"Succeeded in creating a HRM sensor listener.");
@@ -1265,7 +1535,7 @@ void request_health_sensor_permission_response_callback(ppm_call_cause_e cause,
 				dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
 						"Failed to start observing the sensor events regarding a HRM sensor listener.");
 				hrm_launched_state = NONE;
-//				ui_app_exit();
+				//				ui_app_exit();
 			} else
 				dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
 						"Succeeded in starting observing the sensor events regarding a HRM sensor listener.");
@@ -1277,7 +1547,7 @@ void request_health_sensor_permission_response_callback(ppm_call_cause_e cause,
 			dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
 					"The user denied granting permission to use a sensor privilege for an indefinite period of time.");
 			hrm_launched_state = NONE;
-//			ui_app_exit();
+			//			ui_app_exit();
 			break;
 		case PRIVACY_PRIVILEGE_MANAGER_REQUEST_RESULT_DENY_ONCE:
 			/* Show a message with explanation */
@@ -1286,14 +1556,11 @@ void request_health_sensor_permission_response_callback(ppm_call_cause_e cause,
 			dlog_print(DLOG_ERROR, HRM_SENSOR_LOG_TAG,
 					"The user denied granting permission to use a sensor privilege once.");
 			hrm_launched_state = NONE;
-//			ui_app_exit();
+			//			ui_app_exit();
 			break;
 		}
 	}
-}
 
-void request_physics_sensor_permission_response_callback(ppm_call_cause_e cause,
-		ppm_request_result_e result, const char *privilege, void *user_data) {
 	if (cause == PRIVACY_PRIVILEGE_MANAGER_CALL_CAUSE_ERROR) {
 		/* Log and handle errors */
 		dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
@@ -1337,12 +1604,11 @@ void request_physics_sensor_permission_response_callback(ppm_call_cause_e cause,
 				dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
 						"Succeeded in creating a Physics sensor listener.");
 
-			if (!start_physics_sensor_listener()){
+			if (!start_physics_sensor_listener()) {
 				dlog_print(DLOG_ERROR, PHYSICS_SENSOR_LOG_TAG,
 						"Failed to start observing the sensor events regarding a Physics sensor listener.");
 				physics_launched_state = NONE;
-			}
-			else
+			} else
 				dlog_print(DLOG_INFO, PHYSICS_SENSOR_LOG_TAG,
 						"Succeeded in starting observing the sensor events regarding a Physics sensor listener.");
 
@@ -1366,12 +1632,11 @@ void request_physics_sensor_permission_response_callback(ppm_call_cause_e cause,
 				dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
 						"Succeeded in creating a Environment sensor listener.");
 
-			if (!start_environment_sensor_listener()){
+			if (!start_environment_sensor_listener()) {
 				dlog_print(DLOG_ERROR, ENVIRONMENT_SENSOR_LOG_TAG,
 						"Failed to start observing the sensor events regarding a Environment sensor listener.");
 				environment_launched_state = NONE;
-			}
-			else
+			} else
 				dlog_print(DLOG_INFO, ENVIRONMENT_SENSOR_LOG_TAG,
 						"Succeeded in starting observing the sensor events regarding a Environment sensor listener.");
 

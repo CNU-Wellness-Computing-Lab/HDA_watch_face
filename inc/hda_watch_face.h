@@ -45,6 +45,15 @@ extern int day;
 extern int day_of_week;
 extern int battery_level;
 
+extern int final_report_hour;
+extern int final_report_min;
+extern int final_report_sec;
+extern int final_report_year;
+extern int final_report_month;
+extern int final_report_day;
+
+extern int alert_postpone_delay_time;
+
 /* Angle */
 #define HOUR_ANGLE 30
 #define MIN_ANGLE 6
