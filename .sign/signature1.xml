@@ -4,13 +4,13 @@
 <SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"></SignatureMethod>
 <Reference URI="author-signature.xml">
 <DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"></DigestMethod>
-<DigestValue>VDf0w6pKGtaYkVE6D1vz+xSc07KYxLx3VCyPh3y0j0OkcT/qm/hBcv+vifBFCEsY8afjNJKtubgh
-s9x3cVaSNQ==</DigestValue>
+<DigestValue>ZshC1WQercfw/JEGugzPAmtHt/pyiauNlf6q6bABLEqEAW2x4ZDWC+hzy8Bd0fNnY8yhQWo11Kc1
+o7jRKGZ9AQ==</DigestValue>
 </Reference>
 <Reference URI="bin%2Fhda_watch_face">
 <DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"></DigestMethod>
-<DigestValue>QgOWa0TqZMPQRwth7p/ISuHgo9pghqSq9PO7nSqGS0BVeZMfrFlDVCR0PS+AvdHrLiwpA7qJbs2u
-+ytpGhVBgA==</DigestValue>
+<DigestValue>PGvwzDubb7GK9DR4SimqJn2jKfwNHSF9hhttCuTWDxpAxMVLDprYT9bhziT2Z5Wh8t6mpCZ5YR4r
+TgMg7kJ1SQ==</DigestValue>
 </Reference>
 <Reference URI="res%2Fedje%2Fmain.edj">
 <DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"></DigestMethod>
@@ -127,11 +127,11 @@ GyvKX9Snig==</DigestValue>
 </Reference>
 </SignedInfo>
 <SignatureValue>
-MXWc4f+E/mcDlfLXTnOcIrjjcxuqFhlAhVGgxHjYsiu+0GcNgDcxlXFVJReEIRfDvFRwmqIq/qex
-/mBdCeyYfsiT63j0llcM1e9D4MYp1Jg92kBXdD4fUbqncUT70iPKdNhzqq3AZvbPlz2NgzcumdrV
-TQQ51ynk1s3reBoOUtJdaXK9ShYHnGQ3B99jZSW/WZwEWZoNR3LXQfhEJMF9p0C8lu8D4o8Lg07n
-wKdu+jBZBq/Ex8IjrsKgL7lzvkbTXccZbiIrGNMqTL463s2VC/SnW0RAcaWXrzOu0I1jJoKdJJxM
-Gvrif9oIQCrSRCkdQhukFb59nDCOuRRquB3tfw==
+iy3dhWsO36RBIYbngqaU7Ow6c1UQIhFdFYaV7wpA7zgH0rx8W1xUJdj8mUeUvBEYlvyyAXCczVv/
+5uL1J2QrDOoWAOOEeSJUclDkaiIWee6Jbg90aH7B803oKjry2kwY7olKyc8dqYUwwLwsMb2ZauU9
+JSJPJm+laKtSXJ/Dzqj1a93SPUtzRvNedTu9V7LFMkPNSUdiVc7h5nm4SIeVW2hEf2nrrFwv+SE7
+v02cMI4rhvL/W/JXUVGoh0iRVI8HSWasrKmqR9tdlgQt5Y7W+F+yDxEATqEDjgJ2loMeXoYVkC+W
+eHF2jaydbuEDlVSVeKYXPKtyLDYDB6PE+1lxow==
 </SignatureValue>
 <KeyInfo>
 <X509Data>

@@ -1,10 +1,3 @@
-/*
- * environment_listener.c
- *
- *  Created on: Feb 16, 2023
- *      Author: yuju
- */
-
 #include <sensor/environment_listener.h>
 #include "hda_watch_face.h"
 #include "bluetooth/gatt/characteristic.h"
@@ -284,8 +277,10 @@ void light_sensor_listener_event_callback(sensor_h sensor,
 
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
-	snprintf(msg_data, 512, "Light output value = (%s, %llu, %f)\n", date_buf,
-			events[0].timestamp, events[0].values[0]);
+	snprintf(msg_data, 512,
+			//"Light output value = (%s, %llu, %f)\n",
+			"3,%s,%llu,%f\n",
+			date_buf, events[0].timestamp, events[0].values[0]);
 	append_file(filepath, msg_data);
 
 	for (int i = 0; i < events_count; i++) {
@@ -330,7 +325,8 @@ void pedometer_listener_event_callback(sensor_h sensor, sensor_event_s events[],
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
 	snprintf(msg_data, 512,
-			"Pedometer output value = (%s, %llu, %f, %f, %f, %f, %f, %f, %f, %s)\n",
+			//"Pedometer output value = (%s, %llu, %f, %f, %f, %f, %f, %f, %f, %s)\n",
+			"0,%s,%llu,%f,%f,%f,%f,%f,%f,%f,%s\n",
 			date_buf, events[0].timestamp, events[0].values[0],
 			events[0].values[1], events[0].values[2], events[0].values[3],
 			events[0].values[4], events[0].values[5], events[0].values[6],
@@ -347,13 +343,17 @@ void pedometer_listener_event_callback(sensor_h sensor, sensor_event_s events[],
 		float last_stepping_frequency = events[i].values[6];
 
 		if (events[i].values[7] == SENSOR_PEDOMETER_STATE_RUN) {
-			state = "SENSOR_PEDOMETER_STATE_RUN";
+			//state = "SENSOR_PEDOMETER_STATE_RUN";
+			state = "RUN";
 		} else if (events[i].values[7] == SENSOR_PEDOMETER_STATE_STOP) {
-			state = "SENSOR_PEDOMETER_STATE_STOP";
+			//state = "SENSOR_PEDOMETER_STATE_STOP";
+			state = "STOP";
 		} else if (events[i].values[7] == SENSOR_PEDOMETER_STATE_WALK) {
-			state = "SENSOR_PEDOMETER_STATE_WALK";
+			//state = "SENSOR_PEDOMETER_STATE_WALK";
+			state = "WALK";
 		} else {
-			state = "SENSOR_PEDOMETER_STATE_UNKNOWN";
+			//state = "SENSOR_PEDOMETER_STATE_UNKNOWN";
+			state = "UNKNOWN";
 		}
 
 		dlog_print(DLOG_INFO, PEDOMETER_LOG_TAG,
@@ -379,7 +379,9 @@ void pressure_sensor_listener_event_callback(sensor_h sensor,
 
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
-	snprintf(msg_data, 512, "Pressure output value = (%s, %llu, %f)\n",
+	snprintf(msg_data, 512,
+			//"Pressure output value = (%s, %llu, %f)\n",
+			"1,%s,%llu,%f\n",
 			date_buf, events[0].timestamp, events[0].values[0]);
 	append_file(filepath, msg_data);
 
@@ -403,11 +405,14 @@ void sleep_monitor_listener_event_callback(sensor_h sensor,
 	char * state;
 	sensor_sleep_state_e sleep_state = events[0].values[0];
 	if (sleep_state == SENSOR_SLEEP_STATE_WAKE) {
-		state = "SENSOR_SLEEP_STATE_WAKE";
+		//state = "SENSOR_SLEEP_STATE_WAKE";
+		state = "WAKE";
 	} else if (sleep_state == SENSOR_SLEEP_STATE_SLEEP) {
-		state = "SENSOR_SLEEP_STATE_SLEEP";
+		//state = "SENSOR_SLEEP_STATE_SLEEP";
+		state = "SLEEP";
 	} else {
-		state = "SENSOR_SLEEP_STATE_UNKNOWN";
+		//state = "SENSOR_SLEEP_STATE_UNKNOWN";
+		state = "UNKNOWN";
 	}
 	dlog_print(DLOG_INFO, SLEEP_MONITOR_LOG_TAG,
 			"%s/%s/%d: Function sensor_events_callback() output value = (%s, %llu, %s)",
@@ -415,18 +420,20 @@ void sleep_monitor_listener_event_callback(sensor_h sensor,
 
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
-	snprintf(msg_data, 512, "Sleep monitor output value = (%s, %llu, %s)\n",
+	snprintf(msg_data, 512,
+			//"Sleep monitor output value = (%s, %llu, %s)\n",
+			"2,%s,%llu,%s\n",
 			date_buf, events[0].timestamp, state);
 	append_file(filepath, msg_data);
 
 	for (int i = 0; i < events_count; i++) {
 		int accuracy = events[i].accuracy;
 		if (events[i].values[0] == SENSOR_SLEEP_STATE_WAKE) {
-			state = "SENSOR_SLEEP_STATE_WAKE";
+			state = "WAKE";
 		} else if (events[i].values[0] == SENSOR_SLEEP_STATE_SLEEP) {
-			state = "SENSOR_SLEEP_STATE_SLEEP";
+			state = "SLEEP";
 		} else {
-			state = "SENSOR_SLEEP_STATE_UNKNOWN";
+			state = "UNKNOWN";
 		}
 
 		dlog_print(DLOG_INFO, SLEEP_MONITOR_LOG_TAG,

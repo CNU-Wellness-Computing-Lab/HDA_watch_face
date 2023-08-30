@@ -55,7 +55,7 @@ int final_report_year = 0;
 int final_report_month = 0;
 int final_report_day = 0;
 
-int alert_postpone_delay_time = 1800;
+int alert_postpone_delay_time = 10;
 
 typedef struct appdata {
 	Evas_Object *win;
@@ -649,12 +649,12 @@ static void pushed_up_postpone_30(void *user_data, Evas* e, Evas_Object *obj,
 }
 static Eina_Bool pushed_down_postpone_30_animate(void *user_data) {
 	appdata_s *ad = user_data;
-	evas_object_color_set(ad->btn_active, 87, 134, 87, 255);
+	evas_object_color_set(ad->btn_postpone_30, 87, 134, 87, 255);
 	return ECORE_CALLBACK_RENEW;
 }
 static Eina_Bool pushed_up_postpone_30_animate(void *user_data) {
 	appdata_s *ad = user_data;
-	evas_object_color_set(ad->btn_active, 166, 255, 166, 255);
+	evas_object_color_set(ad->btn_postpone_30, 166, 255, 166, 255);
 	return ECORE_CALLBACK_RENEW;
 }
 
@@ -682,12 +682,12 @@ static void pushed_up_postpone_90(void *user_data, Evas* e, Evas_Object *obj,
 }
 static Eina_Bool pushed_down_postpone_90_animate(void *user_data) {
 	appdata_s *ad = user_data;
-	evas_object_color_set(ad->btn_report, 87, 105, 134, 255);
+	evas_object_color_set(ad->btn_postpone_90, 87, 105, 134, 255);
 	return ECORE_CALLBACK_RENEW;
 }
 static Eina_Bool pushed_up_postpone_90_animate(void *user_data) {
 	appdata_s *ad = user_data;
-	evas_object_color_set(ad->btn_report, 166, 200, 255, 255);
+	evas_object_color_set(ad->btn_postpone_90, 166, 200, 255, 255);
 	return ECORE_CALLBACK_RENEW;
 }
 
@@ -718,7 +718,13 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 
 static void _set_alert_visible(void *data, Ecore_Thread *thread, void *msgdata) {
 	appdata_s *ad = data;
-	evas_object_show(ad->alert_screen);
+	int flag = (int) msgdata;
+	if (flag == 0) {
+		evas_object_show(ad->alert_screen);
+	}
+	else {
+		evas_object_hide(ad->alert_screen);
+	}
 }
 static void _encore_thread_check_wear(void *data, Ecore_Thread *thread) {
 	appdata_s *ad = data;
@@ -733,15 +739,15 @@ static void _encore_thread_check_wear(void *data, Ecore_Thread *thread) {
 		unsigned long current_ts = (((((year * 12 + month) * 30) + day) * 24 + hour) * 60 + min) * 60 + sec;
 
 		if (final_report_ts <= current_ts - alert_postpone_delay_time - 600) {
-			ecore_thread_feedback(thread, (void*) (uintptr_t) final_report_ts);
+			ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
 		}
 		else if(final_report_ts <= current_ts - alert_postpone_delay_time){
-			ecore_thread_feedback(thread, (void*) (uintptr_t) final_report_ts);
+			ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
 //			evas_object_show(ad->alert_screen);
 			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 		}
 		else{
-			evas_object_hide(ad->alert_screen);
+			ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
 		}
 		sleep(1);
 	}

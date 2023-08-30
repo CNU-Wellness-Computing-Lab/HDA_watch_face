@@ -29,3 +29,9 @@
 451	673	0	hda_watch_face	e1e3288148f1bf2a
 3	468	0	src/hda_watch_face.o	5d1bf13988b92e41
 468	682	0	hda_watch_face	e1e3288148f1bf2a
+4	435	0	src/hda_watch_face.o	5d1bf13988b92e41
+435	2120	0	hda_watch_face	e1e3288148f1bf2a
+14	506	0	src/sensor/hrm_listener.o	45296b0b87878bba
+4	517	0	src/sensor/environment_listener.o	a6940eae9f9af50b
+9	528	0	src/sensor/physics_listener.o	c1aa0a4827aadb58
+529	768	0	hda_watch_face	e1e3288148f1bf2a

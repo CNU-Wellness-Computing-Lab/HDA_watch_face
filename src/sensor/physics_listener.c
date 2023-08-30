@@ -8,7 +8,7 @@ sensor_listener_h gravity_sensor_listener_handle = 0;
 sensor_listener_h gyroscope_rotation_vector_sensor_listener_handle = 0;
 sensor_listener_h gyroscope_sensor_listener_handle = 0;
 sensor_listener_h linear_acceleration_sensor_listener_handle = 0;
-unsigned int physics_sensor_listener_event_update_interval_ms = 1000;
+unsigned int physics_sensor_listener_event_update_interval_ms = 50;
 
 static void accelerometer_sensor_listener_event_callback(sensor_h sensor,
 		sensor_event_s events[], int events_count, void *user_data);
@@ -336,7 +336,9 @@ void accelerometer_sensor_listener_event_callback(sensor_h sensor,
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
 	snprintf(msg_data, 512,
-			"Accelerometer output value = (%s, %llu, %f, %f, %f)\n", date_buf,
+			//"Accelerometer output value = (%s, %llu, %f, %f, %f)\n",
+			"6,%s,%llu,%f,%f,%f\n",
+			date_buf,
 			events[0].timestamp, events[0].values[0], events[0].values[1],
 			events[0].values[2]);
 	append_file(filepath, msg_data);
@@ -368,7 +370,9 @@ void gravity_sensor_listener_event_callback(sensor_h sensor,
 
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
-	snprintf(msg_data, 512, "Gravity output value = (%s, %llu, %f, %f, %f)\n",
+	snprintf(msg_data, 512,
+			//"Gravity output value = (%s, %llu, %f, %f, %f)\n",
+			"7,%s,%llu,%f,%f,%f\n",
 			date_buf, events[0].timestamp, events[0].values[0],
 			events[0].values[1], events[0].values[2]);
 	append_file(filepath, msg_data);
@@ -402,7 +406,8 @@ void gyroscope_rotation_vector_sensor_listener_event_callback(sensor_h sensor,
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
 	snprintf(msg_data, 512,
-			"Gyroscope rotation vector output value = (%s, %llu, %d, %f, %f, %f, %f)\n",
+			//"Gyroscope rotation vector output value = (%s, %llu, %d, %f, %f, %f, %f)\n",
+			"8,%s,%llu,%d,%f,%f,%f,%f\n",
 			date_buf, events[0].timestamp, events[0].accuracy,
 			events[0].values[0], events[0].values[1], events[0].values[2],
 			events[0].values[3]);
@@ -436,7 +441,9 @@ void gyroscope_sensor_listener_event_callback(sensor_h sensor,
 
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
-	snprintf(msg_data, 512, "Gyroscope output value = (%s, %llu, %f, %f, %f)\n",
+	snprintf(msg_data, 512,
+			//"Gyroscope output value = (%s, %llu, %f, %f, %f)\n",
+			"9,%s,%llu,%f,%f,%f\n",
 			date_buf, events[0].timestamp, events[0].values[0],
 			events[0].values[1], events[0].values[2]);
 	append_file(filepath, msg_data);
@@ -469,7 +476,8 @@ void linear_acceleration_sensor_listener_event_callback(sensor_h sensor,
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
 	snprintf(msg_data, 512,
-			"Linear acceleration output value = (%s, %llu, %f, %f, %f)\n",
+			//"Linear acceleration output value = (%s, %llu, %f, %f, %f)\n",
+			"10,%s,%llu,%f,%f,%f\n",
 			date_buf, events[0].timestamp, events[0].values[0],
 			events[0].values[1], events[0].values[2]);
 	append_file(filepath, msg_data);

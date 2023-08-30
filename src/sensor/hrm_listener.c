@@ -7,7 +7,7 @@
 sensor_listener_h hrm_sensor_listener_handle = 0;
 sensor_listener_h hrm_led_green_sensor_listener_handle = 0;
 
-unsigned int hrm_sensor_listener_event_update_interval_ms = 3000;
+unsigned int hrm_sensor_listener_event_update_interval_ms = 1000;
 
 static void hrm_sensor_listener_event_callback(sensor_h sensor,
 		sensor_event_s events[], void *user_data);
@@ -170,8 +170,10 @@ void hrm_sensor_listener_event_callback(sensor_h sensor,
 			__FILE__, __func__, __LINE__, value);
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
-	snprintf(msg_data, 512, "HRM output value = (%s, %llu, %d)\n", date_buf,
-			events[0].timestamp, value);
+	snprintf(msg_data, 512,
+			//"HRM output value = (%s, %llu, %d)\n",
+			"4,%s,%llu,%d\n",
+			date_buf,events[0].timestamp, value);
 	append_file(filepath, msg_data);
 
 	if(value > 20){
@@ -209,7 +211,9 @@ void hrm_led_green_sensor_listener_event_callback(sensor_h sensor,
 
 	char * filepath = get_write_filepath("hda_sensor_data.txt");
 	char msg_data[512];
-	snprintf(msg_data, 512, "HRM led green output value = (%s, %llu, %d)\n",
+	snprintf(msg_data, 512,
+			//"HRM led green output value = (%s, %llu, %d)\n",
+			"5,%s,%llu,%d\n",
 			date_buf, events[0].timestamp, value);
 	append_file(filepath, msg_data);
 }
