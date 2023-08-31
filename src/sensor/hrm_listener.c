@@ -183,8 +183,12 @@ void hrm_sensor_listener_event_callback(sensor_h sensor,
 		final_report_hour = hour;
 		final_report_min = min;
 		final_report_sec = sec;
+		hrm_activated_flag = true;
 		dlog_print(DLOG_INFO, HRM_SENSOR_LOG_TAG,
 					"%d %d %d %d %d %d", year, month, day, hour, min, sec);
+	}
+	else{
+		hrm_activated_flag = false;
 	}
 	//	if(!set_gatt_characteristic_value(value))
 	//		dlog_print(DLOG_ERROR, SENSOR_LOG_TAG, "%s/%s/%d: Failed to update the value of a characteristic's GATT handle.", __FILE__, __func__, __LINE__);
