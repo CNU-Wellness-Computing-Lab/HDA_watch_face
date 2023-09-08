@@ -58,6 +58,7 @@ int final_report_day = 0;
 int alert_postpone_delay_time = 1800;
 int alert_counter = 0;
 bool hrm_activated_flag = false;
+bool request_report_flag = false;
 
 typedef struct appdata {
 	Evas_Object *win;
@@ -154,6 +155,7 @@ bool initialize_sleep_monitor();
 static void _encore_thread_update_date(void *data, Ecore_Thread *thread);
 static void _set_alert_visible(void *data, Ecore_Thread *thread, void *msgdata);
 static void _encore_thread_check_wear(void*date, Ecore_Thread *thread);
+static void _encore_thread_request_report(void*date, Ecore_Thread *thread);
 //int GetTimeT(int year, int month, int day, int hour, int minute, int second);
 
 const char *sensor_privilege = "http://tizen.org/privilege/healthinfo";
@@ -373,8 +375,8 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	ecore_thread_feedback_run(_encore_thread_update_date, NULL, NULL, NULL, ad,
 	EINA_FALSE);
 	ecore_thread_feedback_run(_encore_thread_check_wear, _set_alert_visible,
-			NULL, NULL, ad,
-			EINA_FALSE);
+	NULL, NULL, ad,
+	EINA_FALSE);
 }
 
 static bool app_create(int width, int height, void *data) {
@@ -596,6 +598,7 @@ static void pushed_down_report(void *user_data, Evas* e, Evas_Object *obj,
 static void pushed_up_report(void *user_data, Evas* e, Evas_Object *obj,
 		void *event_info) {
 	appdata_s *ad = user_data;
+	request_report_flag = true;
 
 	app_control_create(&app_controller);
 	app_control_set_operation(app_controller, APP_CONTROL_OPERATION_DEFAULT);
@@ -803,6 +806,34 @@ static void _encore_thread_check_wear(void *data, Ecore_Thread *thread) {
 //				ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
 //			}
 		}
+		sleep(1);
+	}
+}
+
+static void _encore_thread_request_report(void *data, Ecore_Thread *thread) {
+	appdata_s *ad = data;
+
+	while (1) {
+		if(request_report_flag == true){
+			continue;
+		}
+
+		if (hour == 12 && min == 0 && sec-1 <= 0) {
+			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+			flag = true;
+		}
+		else if (hour == 18 && min == 0 && sec-1 <= 0) {
+			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+			flag = true;
+		}
+		else if (hour == 21 && min == 0 && sec-1 <= 0) {
+			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+			flag = true;
+		}
+		else {
+
+		}
+
 		sleep(1);
 	}
 }
