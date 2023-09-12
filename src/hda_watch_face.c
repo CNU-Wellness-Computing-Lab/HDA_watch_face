@@ -374,9 +374,9 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 
 	ecore_thread_feedback_run(_encore_thread_update_date, NULL, NULL, NULL, ad,
 	EINA_FALSE);
-	ecore_thread_feedback_run(_encore_thread_check_wear, _set_alert_visible,
-	NULL, NULL, ad,
-	EINA_FALSE);
+//	ecore_thread_feedback_run(_encore_thread_check_wear, _set_alert_visible,
+//	NULL, NULL, ad,
+//	EINA_FALSE);
 }
 
 static bool app_create(int width, int height, void *data) {
@@ -702,6 +702,7 @@ static Eina_Bool pushed_up_postpone_90_animate(void *user_data) {
 static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 	appdata_s *ad = data;
 
+	int alert_repeat = 0;
 	while (1) {
 		int ret;
 		watch_time_h watch_time = NULL;
@@ -716,6 +717,92 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 		watch_time_get_month(watch_time, &month);
 		watch_time_get_year(watch_time, &year);
 		watch_time_get_day_of_week(watch_time, &day_of_week);
+
+		////////////////////////////////////
+
+		if (final_report_year == 0 || final_report_month == 0
+				|| final_report_day == 0) {
+
+		} else {
+			unsigned long final_report_ts = (((((final_report_year * 12
+					+ final_report_month) * 30) + final_report_day) * 24
+					+ final_report_hour) * 60 + final_report_min) * 60
+					+ final_report_sec;
+			unsigned long current_ts = (((((year * 12 + month) * 30) + day) * 24
+					+ hour) * 60 + min) * 60 + sec;
+
+			if (final_report_ts > current_ts - alert_postpone_delay_time) {
+				ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
+				alert_counter = 0;
+			} else {
+
+				if (hrm_activated_flag == false) {
+					if (alert_counter == 0) {
+						if (final_report_ts
+								<= current_ts - alert_postpone_delay_time) {
+							ecore_thread_feedback(thread,
+									(void*) (uintptr_t) 0);
+							feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+							alert_repeat += 1;
+
+							if (alert_repeat >= 3) {
+								alert_repeat = 0;
+								alert_counter += 1;
+							}
+						}
+					} else if (alert_counter == 1) {
+						if (final_report_ts
+								<= current_ts - alert_postpone_delay_time
+										- 1800) {
+							ecore_thread_feedback(thread,
+									(void*) (uintptr_t) 0);
+							feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+							alert_repeat += 1;
+
+							if (alert_repeat >= 3) {
+								alert_repeat = 0;
+								alert_counter += 1;
+							}
+						}
+					} else if (alert_counter == 2) {
+						if (final_report_ts
+								<= current_ts - alert_postpone_delay_time
+										- 3600) {
+							ecore_thread_feedback(thread,
+									(void*) (uintptr_t) 0);
+							feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+							alert_repeat += 1;
+
+							if (alert_repeat >= 3) {
+								alert_repeat = 0;
+								alert_counter += 1;
+							}
+						}
+					} else {
+						ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
+					}
+				}
+			}
+		}
+
+		////////////////////////////////////
+
+		if (request_report_flag != true) {
+			if (hour == 12 && min == 0 && sec - 1 <= 0) {
+				feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+				flag = true;
+			} else if (hour == 18 && min == 0 && sec - 1 <= 0) {
+				feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+				flag = true;
+			} else if (hour == 21 && min == 0 && sec - 1 <= 0) {
+				feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+				flag = true;
+			} else {
+
+			}
+		}
+
+		////////////////////////////////////
 
 		sleep(1);
 	}
@@ -814,23 +901,20 @@ static void _encore_thread_request_report(void *data, Ecore_Thread *thread) {
 	appdata_s *ad = data;
 
 	while (1) {
-		if(request_report_flag == true){
+		if (request_report_flag == true) {
 			continue;
 		}
 
-		if (hour == 12 && min == 0 && sec-1 <= 0) {
+		if (hour == 12 && min == 0 && sec - 1 <= 0) {
 			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 			flag = true;
-		}
-		else if (hour == 18 && min == 0 && sec-1 <= 0) {
+		} else if (hour == 18 && min == 0 && sec - 1 <= 0) {
 			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 			flag = true;
-		}
-		else if (hour == 21 && min == 0 && sec-1 <= 0) {
+		} else if (hour == 21 && min == 0 && sec - 1 <= 0) {
 			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 			flag = true;
-		}
-		else {
+		} else {
 
 		}
 
