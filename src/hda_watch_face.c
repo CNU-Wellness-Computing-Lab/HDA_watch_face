@@ -60,6 +60,9 @@ int alert_counter = 0;
 bool hrm_activated_flag = false;
 bool request_report_flag = false;
 
+int active_state = 0;
+bool alert_active_flag = true;
+
 typedef struct appdata {
 	Evas_Object *win;
 	Evas_Object *conform;
@@ -152,10 +155,12 @@ bool initialize_pedometer();
 bool initialize_pressure_sensor();
 bool initialize_sleep_monitor();
 
+static void _encore_thread_active_long_press(void *data, Ecore_Thread *thread);
+static void _set_active_color(void *data, Ecore_Thread *thread, void *msgdata);
 static void _encore_thread_update_date(void *data, Ecore_Thread *thread);
 static void _set_alert_visible(void *data, Ecore_Thread *thread, void *msgdata);
-static void _encore_thread_check_wear(void*date, Ecore_Thread *thread);
-static void _encore_thread_request_report(void*date, Ecore_Thread *thread);
+//static void _encore_thread_check_wear(void*date, Ecore_Thread *thread);
+//static void _encore_thread_request_report(void*date, Ecore_Thread *thread);
 //int GetTimeT(int year, int month, int day, int hour, int minute, int second);
 
 const char *sensor_privilege = "http://tizen.org/privilege/healthinfo";
@@ -374,6 +379,8 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 
 	ecore_thread_feedback_run(_encore_thread_update_date, _set_alert_visible, NULL, NULL, ad,
 	EINA_FALSE);
+	ecore_thread_feedback_run(_encore_thread_active_long_press, _set_active_color, NULL, NULL, ad,
+		EINA_FALSE);
 //	ecore_thread_feedback_run(_encore_thread_check_wear, _set_alert_visible,
 //	NULL, NULL, ad,
 //	EINA_FALSE);
@@ -572,11 +579,13 @@ int main(int argc, char *argv[]) {
 static void pushed_down_active(void *user_data, Evas* e, Evas_Object *obj,
 		void *event_info) {
 	appdata_s *ad = user_data;
+	active_state = 1;
 	ecore_animator_add(pushed_down_active_animate, ad);
 }
 static void pushed_up_active(void *user_data, Evas* e, Evas_Object *obj,
 		void *event_info) {
 	appdata_s *ad = user_data;
+	active_state = 0;
 	ecore_animator_add(pushed_up_active_animate, ad);
 }
 static Eina_Bool pushed_down_active_animate(void *user_data) {
@@ -586,8 +595,54 @@ static Eina_Bool pushed_down_active_animate(void *user_data) {
 }
 static Eina_Bool pushed_up_active_animate(void *user_data) {
 	appdata_s *ad = user_data;
-	evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
+	if(alert_active_flag == true){
+		evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
+	}
+	else{
+		evas_object_color_set(ad->btn_active, 238, 36, 36, 255);
+	}
 	return ECORE_CALLBACK_RENEW;
+}
+
+static void _set_active_color(void *data, Ecore_Thread *thread, void *msgdata) {
+	appdata_s *ad = data;
+	int flag = (int) msgdata;
+	if (flag == 0) {
+		evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
+	} else if(flag == 1) {
+		evas_object_color_set(ad->btn_active, 207, 0, 0, 255);
+	}
+}
+
+static void _encore_thread_active_long_press(void *data, Ecore_Thread *thread) {
+	appdata_s *ad = data;
+
+	flag_time = 0;
+	while (1) {
+		if (flag_time >= 3) {
+			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+			if(alert_active_flag == true){
+				alert_active_flag = false;
+				active_state = 0;
+				flag_time = 0;
+				ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
+			}
+			else{
+				alert_active_flag = true;
+				active_state = 0;
+				flag_time = 0;
+				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
+			}
+		}
+
+		sleep(1);
+		if (active_state == 1) {
+			flag_time += 1;
+		}
+		else{
+			flag_time = 0;
+		}
+	}
 }
 
 static void pushed_down_report(void *user_data, Evas* e, Evas_Object *obj,
@@ -722,6 +777,11 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 
 		////////////////////////////////////
 
+		if(alert_active_flag == false){
+			sleep(5);
+			continue;
+		}
+
 		if (final_report_year == 0 || final_report_month == 0
 				|| final_report_day == 0) {
 
@@ -737,7 +797,6 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
 				alert_counter = 0;
 			} else {
-
 				if (hrm_activated_flag == false) {
 					if (alert_counter == 0) {
 						if (final_report_ts
