@@ -261,35 +261,35 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	evas_object_show(ad->label);
 
 	// 활성화 버튼
-//	ad->btn_active = evas_object_rectangle_add(ad->basic_screen);
-//	evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
-//	elm_grid_pack(ad->basic_screen, ad->btn_active, 0, 50, 50, 50);
-//	evas_object_show(ad->btn_active);
-//	ad->text_btn_active = elm_label_add(ad->basic_screen);
-//	evas_object_color_set(ad->text_btn_active, 255, 255, 255, 255);
-//	elm_object_text_set(ad->text_btn_active,
-//			"<align=center><font_size=30><b>활성화</b></font></align>");
-//	elm_grid_pack(ad->basic_screen, ad->text_btn_active, 0, 65, 50, 10);
-//	evas_object_show(ad->text_btn_active);
-//	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_DOWN,
-//			pushed_down_active, ad);
-//	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_UP,
-//			pushed_up_active, ad);
-//	evas_object_event_callback_add(ad->text_btn_active,
-//			EVAS_CALLBACK_MOUSE_DOWN, pushed_down_active, ad);
-//	evas_object_event_callback_add(ad->text_btn_active, EVAS_CALLBACK_MOUSE_UP,
-//			pushed_up_active, ad);
+	ad->btn_active = evas_object_rectangle_add(ad->basic_screen);
+	evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
+	elm_grid_pack(ad->basic_screen, ad->btn_active, 0, 50, 50, 50);
+	evas_object_show(ad->btn_active);
+	ad->text_btn_active = elm_label_add(ad->basic_screen);
+	evas_object_color_set(ad->text_btn_active, 255, 255, 255, 255);
+	elm_object_text_set(ad->text_btn_active,
+			"<align=center><font_size=30><b>활성화</b></font></align>");
+	elm_grid_pack(ad->basic_screen, ad->text_btn_active, 0, 65, 50, 10);
+	evas_object_show(ad->text_btn_active);
+	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_DOWN,
+			pushed_down_active, ad);
+	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_active, ad);
+	evas_object_event_callback_add(ad->text_btn_active,
+			EVAS_CALLBACK_MOUSE_DOWN, pushed_down_active, ad);
+	evas_object_event_callback_add(ad->text_btn_active, EVAS_CALLBACK_MOUSE_UP,
+			pushed_up_active, ad);
 
-// 기록 버튼
+	// 기록 버튼
 	ad->btn_report = evas_object_rectangle_add(ad->basic_screen);
 	evas_object_color_set(ad->btn_report, 0, 0, 0, 255);
-	elm_grid_pack(ad->basic_screen, ad->btn_report, 0, 50, 100, 50);
+	elm_grid_pack(ad->basic_screen, ad->btn_report, 50, 50, 50, 50);
 	evas_object_show(ad->btn_report);
 	ad->text_btn_report = elm_label_add(ad->basic_screen);
 	evas_object_color_set(ad->text_btn_report, 255, 255, 255, 255);
 	elm_object_text_set(ad->text_btn_report,
 			"<align=center><font_size=30><b>기록</b></font></align>");
-	elm_grid_pack(ad->basic_screen, ad->text_btn_report, 0, 65, 100, 10);
+	elm_grid_pack(ad->basic_screen, ad->text_btn_report, 50, 65, 50, 10);
 	evas_object_show(ad->text_btn_report);
 	evas_object_event_callback_add(ad->btn_report, EVAS_CALLBACK_MOUSE_DOWN,
 			pushed_down_report, ad);
@@ -372,7 +372,7 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	/* Show window after base gui is set up */
 	evas_object_show(ad->win);
 
-	ecore_thread_feedback_run(_encore_thread_update_date, NULL, NULL, NULL, ad,
+	ecore_thread_feedback_run(_encore_thread_update_date, _set_alert_visible, NULL, NULL, ad,
 	EINA_FALSE);
 //	ecore_thread_feedback_run(_encore_thread_check_wear, _set_alert_visible,
 //	NULL, NULL, ad,
@@ -624,6 +624,8 @@ static Eina_Bool pushed_down_report_animate(void *user_data) {
 static Eina_Bool pushed_up_report_animate(void *user_data) {
 	appdata_s *ad = user_data;
 	evas_object_color_set(ad->btn_report, 0, 0, 0, 255);
+	elm_object_text_set(ad->text_btn_report,
+						"<align=center><font_size=30>기록</b></font></align>");
 	return ECORE_CALLBACK_RENEW;
 }
 
@@ -732,7 +734,7 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 					+ hour) * 60 + min) * 60 + sec;
 
 			if (final_report_ts > current_ts - alert_postpone_delay_time) {
-				ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
+				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
 				alert_counter = 0;
 			} else {
 
@@ -741,7 +743,7 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 						if (final_report_ts
 								<= current_ts - alert_postpone_delay_time) {
 							ecore_thread_feedback(thread,
-									(void*) (uintptr_t) 0);
+									(void*) (uintptr_t) 1);
 							feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 							alert_repeat += 1;
 
@@ -753,9 +755,9 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 					} else if (alert_counter == 1) {
 						if (final_report_ts
 								<= current_ts - alert_postpone_delay_time
-										- 1800) {
+										- 1800) { // original setting: 1800
 							ecore_thread_feedback(thread,
-									(void*) (uintptr_t) 0);
+									(void*) (uintptr_t) 2);
 							feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 							alert_repeat += 1;
 
@@ -767,9 +769,9 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 					} else if (alert_counter == 2) {
 						if (final_report_ts
 								<= current_ts - alert_postpone_delay_time
-										- 3600) {
+										- 3600) { // original setting: 3600
 							ecore_thread_feedback(thread,
-									(void*) (uintptr_t) 0);
+									(void*) (uintptr_t) 3);
 							feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 							alert_repeat += 1;
 
@@ -779,7 +781,7 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 							}
 						}
 					} else {
-						ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
+						ecore_thread_feedback(thread, (void*) (uintptr_t) 4);
 					}
 				}
 			}
@@ -787,19 +789,20 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 
 		////////////////////////////////////
 
-		if (request_report_flag != true) {
-			if (hour == 12 && min == 0 && sec - 1 <= 0) {
-				feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-				flag = true;
-			} else if (hour == 18 && min == 0 && sec - 1 <= 0) {
-				feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-				flag = true;
-			} else if (hour == 21 && min == 0 && sec - 1 <= 0) {
-				feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-				flag = true;
-			} else {
+		if (hour == 9 && min == 0 && sec - 3 <= 0) { // 3초 동안 울리는 매커니즘: sec - 3 <= 0
+			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+			ecore_thread_feedback(thread, (void*) (uintptr_t) 5);
+			flag = true;
+		} else if (hour == 15 && min == 0 && sec - 3 <= 0) {
+			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+			ecore_thread_feedback(thread, (void*) (uintptr_t) 5);
+			flag = true;
+		} else if (hour == 21 && min == 0 && sec - 3 <= 0) {
+			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+			ecore_thread_feedback(thread, (void*) (uintptr_t) 5);
+			flag = true;
+		} else {
 
-			}
 		}
 
 		////////////////////////////////////
@@ -812,115 +815,133 @@ static void _set_alert_visible(void *data, Ecore_Thread *thread, void *msgdata) 
 	appdata_s *ad = data;
 	int flag = (int) msgdata;
 	if (flag == 0) {
-		evas_object_show(ad->alert_screen);
-	} else {
 		evas_object_hide(ad->alert_screen);
+	} else if(flag == 1) {
+		elm_object_text_set(ad->alert,
+					"<align=center><font_size=30><b>시계의 착용 상태를<br>확인해주세요. (code:1)</b></font></align>");
+		evas_object_show(ad->alert_screen);
+	}else if(flag == 2) {
+		elm_object_text_set(ad->alert,
+					"<align=center><font_size=30><b>시계의 착용 상태를<br>확인해주세요. (code:2)</b></font></align>");
+		evas_object_show(ad->alert_screen);
+	}else if(flag == 3) {
+		elm_object_text_set(ad->alert,
+					"<align=center><font_size=30><b>시계의 착용 상태를<br>확인해주세요. (code:3)</b></font></align>");
+		evas_object_show(ad->alert_screen);
+	}else if(flag == 4) {
+		elm_object_text_set(ad->alert,
+					"<align=center><font_size=30><b>시계의 착용 상태를<br>확인해주세요. (code:4)</b></font></align>");
+		evas_object_show(ad->alert_screen);
+	}else if(flag == 5){
+		evas_object_color_set(ad->text_btn_report, 96, 193, 162, 255);
+		elm_object_text_set(ad->text_btn_report,
+					"<align=center><font_size=30><b>현재 상태를<br>기록해주세요.</b></font></align>");
 	}
 }
-static void _encore_thread_check_wear(void *data, Ecore_Thread *thread) {
-	appdata_s *ad = data;
-
-	int alert_repeat = 0;
-	while (1) {
-		if (final_report_year == 0 || final_report_month == 0
-				|| final_report_day == 0) {
-			sleep(1);
-			continue;
-		}
-
-		unsigned long final_report_ts = (((((final_report_year * 12
-				+ final_report_month) * 30) + final_report_day) * 24
-				+ final_report_hour) * 60 + final_report_min) * 60
-				+ final_report_sec;
-		unsigned long current_ts = (((((year * 12 + month) * 30) + day) * 24
-				+ hour) * 60 + min) * 60 + sec;
-
-		if (final_report_ts > current_ts - alert_postpone_delay_time) {
-			ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
-			alert_counter = 0;
-			continue;
-		}
-
-		if (hrm_activated_flag == false) {
-			if (alert_counter == 0) {
-				if (final_report_ts <= current_ts - alert_postpone_delay_time) {
-					ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
-					feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-					alert_repeat += 1;
-
-					if (alert_repeat >= 3) {
-						alert_repeat = 0;
-						alert_counter += 1;
-					}
-				}
-			} else if (alert_counter == 1) {
-				if (final_report_ts
-						<= current_ts - alert_postpone_delay_time - 1800) {
-					ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
-					feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-					alert_repeat += 1;
-
-					if (alert_repeat >= 3) {
-						alert_repeat = 0;
-						alert_counter += 1;
-					}
-				}
-			} else if (alert_counter == 2) {
-				if (final_report_ts
-						<= current_ts - alert_postpone_delay_time - 3600) {
-					ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
-					feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-					alert_repeat += 1;
-
-					if (alert_repeat >= 3) {
-						alert_repeat = 0;
-						alert_counter += 1;
-					}
-				}
-			} else {
-				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
-			}
-
-//			if (final_report_ts <= current_ts - alert_postpone_delay_time - 600) {
-//				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
+//static void _encore_thread_check_wear(void *data, Ecore_Thread *thread) {
+//	appdata_s *ad = data;
+//
+//	int alert_repeat = 0;
+//	while (1) {
+//		if (final_report_year == 0 || final_report_month == 0
+//				|| final_report_day == 0) {
+//			sleep(1);
+//			continue;
+//		}
+//
+//		unsigned long final_report_ts = (((((final_report_year * 12
+//				+ final_report_month) * 30) + final_report_day) * 24
+//				+ final_report_hour) * 60 + final_report_min) * 60
+//				+ final_report_sec;
+//		unsigned long current_ts = (((((year * 12 + month) * 30) + day) * 24
+//				+ hour) * 60 + min) * 60 + sec;
+//
+//		if (final_report_ts > current_ts - alert_postpone_delay_time) {
+//			ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
+//			alert_counter = 0;
+//			continue;
+//		}
+//
+//		if (hrm_activated_flag == false) {
+//			if (alert_counter == 0) {
+//				if (final_report_ts <= current_ts - alert_postpone_delay_time) {
+//					ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
+//					feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+//					alert_repeat += 1;
+//
+//					if (alert_repeat >= 3) {
+//						alert_repeat = 0;
+//						alert_counter += 1;
+//					}
+//				}
+//			} else if (alert_counter == 1) {
+//				if (final_report_ts
+//						<= current_ts - alert_postpone_delay_time - 10) { // original setting: 1800
+//					ecore_thread_feedback(thread, (void*) (uintptr_t) 2);
+//					feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+//					alert_repeat += 1;
+//
+//					if (alert_repeat >= 3) {
+//						alert_repeat = 0;
+//						alert_counter += 1;
+//					}
+//				}
+//			} else if (alert_counter == 2) {
+//				if (final_report_ts
+//						<= current_ts - alert_postpone_delay_time - 10) { // original setting: 3600
+//					ecore_thread_feedback(thread, (void*) (uintptr_t) 3);
+//					feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+//					alert_repeat += 1;
+//
+//					if (alert_repeat >= 3) {
+//						alert_repeat = 0;
+//						alert_counter += 1;
+//					}
+//				}
+//			} else {
+//				ecore_thread_feedback(thread, (void*) (uintptr_t) 4);
 //			}
-//			else if(final_report_ts <= current_ts - alert_postpone_delay_time){
-//				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
-//				feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-//				alert_counter += 1;
-//			}
-//			else{
-//				ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
-//			}
-		}
-		sleep(1);
-	}
-}
+//
+////			if (final_report_ts <= current_ts - alert_postpone_delay_time - 600) {
+////				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
+////			}
+////			else if(final_report_ts <= current_ts - alert_postpone_delay_time){
+////				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
+////				feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+////				alert_counter += 1;
+////			}
+////			else{
+////				ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
+////			}
+//		}
+//		sleep(1);
+//	}
+//}
 
-static void _encore_thread_request_report(void *data, Ecore_Thread *thread) {
-	appdata_s *ad = data;
-
-	while (1) {
-		if (request_report_flag == true) {
-			continue;
-		}
-
-		if (hour == 12 && min == 0 && sec - 1 <= 0) {
-			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-			flag = true;
-		} else if (hour == 18 && min == 0 && sec - 1 <= 0) {
-			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-			flag = true;
-		} else if (hour == 21 && min == 0 && sec - 1 <= 0) {
-			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-			flag = true;
-		} else {
-
-		}
-
-		sleep(1);
-	}
-}
+//static void _encore_thread_request_report(void *data, Ecore_Thread *thread) {
+//	appdata_s *ad = data;
+//	flag = false;
+//	while (1) {
+//		if (request_report_flag == true) {
+//			continue;
+//		}
+//
+//		if (hour == 12 && min == 0 && sec - 1 <= 0) {
+//			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+//			flag = true;
+//		} else if (hour == 18 && min == 0 && sec - 1 <= 0) {
+//			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+//			flag = true;
+//		} else if (hour == 21 && min == 0 && sec - 1 <= 0) {
+//			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+//			flag = true;
+//		} else {
+//
+//		}
+//
+//		sleep(1);
+//	}
+//}
 
 //sensor_is_supported()
 bool check_hrm_sensor_is_supported() {
