@@ -53,6 +53,7 @@ extern int final_report_month;
 extern int final_report_day;
 
 extern bool hrm_activated_flag;
+extern bool hrm_activated_physics_flag;
 extern int alert_counter;
 extern int alert_postpone_delay_time;
 
