@@ -63,6 +63,8 @@ bool request_report_flag = false;
 int active_state = 0;
 bool alert_active_flag = true;
 
+static char temp_watch_text[32];
+
 typedef struct appdata {
 	Evas_Object *win;
 	Evas_Object *conform;
@@ -226,8 +228,8 @@ static void update_watch(appdata_s *ad, watch_time_h watch_time, int ambient) {
 	watch_time_get_second(watch_time, &second);
 	if (!ambient) {
 		snprintf(watch_text, TEXT_BUF_SIZE,
-				"<align=center>HDA Service<br/>%02d:%02d:%02d</align>", hour24,
-				minute, second);
+				"<align=center>%s<br/>%02d:%02d:%02d</align>", temp_watch_text,
+				hour24, minute, second);
 	} else {
 		snprintf(watch_text, TEXT_BUF_SIZE,
 				"<align=center>Hello Watch<br/>%02d:%02d</align>", hour24,
@@ -273,7 +275,7 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	ad->text_btn_active = elm_label_add(ad->basic_screen);
 	evas_object_color_set(ad->text_btn_active, 255, 255, 255, 255);
 	elm_object_text_set(ad->text_btn_active,
-			"<align=center><font_size=30><b>활성화</b></font></align>");
+			"<align=center><font_size=30><b>방해금지</b></font></align>");
 	elm_grid_pack(ad->basic_screen, ad->text_btn_active, 0, 65, 50, 10);
 	evas_object_show(ad->text_btn_active);
 	evas_object_event_callback_add(ad->btn_active, EVAS_CALLBACK_MOUSE_DOWN,
@@ -378,8 +380,8 @@ static void create_base_gui(appdata_s *ad, int width, int height) {
 	evas_object_show(ad->win);
 
 	ecore_thread_feedback_run(_encore_thread_update_date, _set_alert_visible,
-			NULL, NULL, ad,
-			EINA_FALSE);
+	NULL, NULL, ad,
+	EINA_FALSE);
 //	ecore_thread_feedback_run(_encore_thread_active_long_press, _set_active_color, NULL, NULL, ad,
 //		EINA_FALSE);
 
@@ -398,6 +400,8 @@ static bool app_create(int width, int height, void *data) {
 	/*
 	 * Register callbacks for each system event
 	 */
+	snprintf(temp_watch_text, 32, "%s", "HDA_Service");
+
 	if (watch_app_add_event_handler(&handlers[APP_EVENT_LANGUAGE_CHANGED],
 			APP_EVENT_LANGUAGE_CHANGED, lang_changed, NULL) != APP_ERROR_NONE)
 		dlog_print(DLOG_ERROR, LOG_TAG,
@@ -593,6 +597,12 @@ static void pushed_up_active(void *user_data, Evas* e, Evas_Object *obj,
 		alert_active_flag = false;
 	} else {
 		alert_active_flag = true;
+		final_report_year = year;
+		final_report_month = month;
+		final_report_day = day;
+		final_report_hour = hour;
+		final_report_min = min;
+		final_report_sec = sec;
 	}
 	ecore_animator_add(pushed_up_active_animate, ad);
 }
@@ -603,10 +613,9 @@ static Eina_Bool pushed_down_active_animate(void *user_data) {
 }
 static Eina_Bool pushed_up_active_animate(void *user_data) {
 	appdata_s *ad = user_data;
-	if(alert_active_flag == true){
+	if (alert_active_flag == true) {
 		evas_object_color_set(ad->btn_active, 0, 0, 0, 255);
-	}
-	else{
+	} else {
 		evas_object_color_set(ad->btn_active, 238, 36, 36, 255);
 	}
 	return ECORE_CALLBACK_RENEW;
@@ -622,34 +631,34 @@ static void _set_active_color(void *data, Ecore_Thread *thread, void *msgdata) {
 	}
 }
 
-static void _encore_thread_active_long_press(void *data, Ecore_Thread *thread) {
-	appdata_s *ad = data;
-
-	int flag_time = 0;
-	while (1) {
-		if (flag_time >= 3) {
-			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
-			if (alert_active_flag == true) {
-				alert_active_flag = false;
-				active_state = 0;
-				flag_time = 0;
-				ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
-			} else {
-				alert_active_flag = true;
-				active_state = 0;
-				flag_time = 0;
-				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
-			}
-		}
-
-		sleep(1);
-		if (active_state == 1) {
-			flag_time += 1;
-		} else {
-			flag_time = 0;
-		}
-	}
-}
+//static void _encore_thread_active_long_press(void *data, Ecore_Thread *thread) {
+//	appdata_s *ad = data;
+//
+//	int flag_time = 0;
+//	while (1) {
+//		if (flag_time >= 3) {
+//			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
+//			if (alert_active_flag == true) {
+//				alert_active_flag = false;
+//				active_state = 0;
+//				flag_time = 0;
+//				ecore_thread_feedback(thread, (void*) (uintptr_t) 1);
+//			} else {
+//				alert_active_flag = true;
+//				active_state = 0;
+//				flag_time = 0;
+//				ecore_thread_feedback(thread, (void*) (uintptr_t) 0);
+//			}
+//		}
+//
+//		sleep(1);
+//		if (active_state == 1) {
+//			flag_time += 1;
+//		} else {
+//			flag_time = 0;
+//		}
+//	}
+//}
 
 static void pushed_down_report(void *user_data, Evas* e, Evas_Object *obj,
 		void *event_info) {
@@ -660,6 +669,7 @@ static void pushed_up_report(void *user_data, Evas* e, Evas_Object *obj,
 		void *event_info) {
 	appdata_s *ad = user_data;
 	request_report_flag = true;
+	snprintf(temp_watch_text, 32, "%s", "HDA_Service");
 
 	app_control_create(&app_controller);
 	app_control_set_operation(app_controller, APP_CONTROL_OPERATION_DEFAULT);
@@ -685,8 +695,6 @@ static Eina_Bool pushed_down_report_animate(void *user_data) {
 static Eina_Bool pushed_up_report_animate(void *user_data) {
 	appdata_s *ad = user_data;
 	evas_object_color_set(ad->btn_report, 0, 0, 0, 255);
-	elm_object_text_set(ad->text_btn_report,
-			"<align=center><font_size=30>기록</b></font></align>");
 	return ECORE_CALLBACK_RENEW;
 }
 
@@ -858,7 +866,7 @@ static void _encore_thread_update_date(void *data, Ecore_Thread *thread) {
 		} else if (hour == 15 && min == 0 && sec - 3 <= 0) {
 			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 			ecore_thread_feedback(thread, (void*) (uintptr_t) 5);
-		} else if (hour == 21 && min == 0 && sec - 3 <= 0) {
+		}else if (hour == 21 && min == 0 && sec - 3 <= 0) {
 			feedback_play(FEEDBACK_PATTERN_VIBRATION_ON);
 			ecore_thread_feedback(thread, (void*) (uintptr_t) 5);
 		} else {
@@ -893,9 +901,8 @@ static void _set_alert_visible(void *data, Ecore_Thread *thread, void *msgdata) 
 				"<align=center><font_size=30><b>시계의 착용 상태를<br>확인해주세요. (code:4)</b></font></align>");
 		evas_object_show(ad->alert_screen);
 	} else if (flag == 5) {
-		evas_object_color_set(ad->btn_report, 96, 193, 162, 255);
-		elm_object_text_set(ad->text_btn_report,
-				"<align=center><font_size=25><b>현재 상태를<br>기록해주세요.</b></font></align>");
+//		evas_object_color_set(ad->btn_report, 96, 193, 162, 255);
+		snprintf(temp_watch_text, 32, "%s", "통증 입력을 해주세요.");
 	}
 }
 //static void _encore_thread_check_wear(void *data, Ecore_Thread *thread) {

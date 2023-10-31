@@ -304,13 +304,13 @@ void pedometer_listener_event_callback(sensor_h sensor, sensor_event_s events[],
 	sensor_pedometer_state_e pedometer_state = events[0].values[7];
 
 	if (pedometer_state == SENSOR_PEDOMETER_STATE_RUN) {
-		state = "SENSOR_PEDOMETER_STATE_RUN";
+		state = "RUN";
 	} else if (pedometer_state == SENSOR_PEDOMETER_STATE_STOP) {
-		state = "SENSOR_PEDOMETER_STATE_STOP";
+		state = "STOP";
 	} else if (pedometer_state == SENSOR_PEDOMETER_STATE_WALK) {
-		state = "SENSOR_PEDOMETER_STATE_WALK";
+		state = "WALK";
 	} else {
-		state = "SENSOR_PEDOMETER_STATE_UNKNOWN";
+		state = "UNKNOWN";
 	}
 	//SENSOR_PEDOMETER_STATE_RUN 2 | SENSOR_PEDOMETER_STATE_STOP 0 | SENSOR_PEDOMETER_STATE_WALK 1 | SENSOR_PEDOMETER_STATE_WALK -1
 	dlog_print(DLOG_INFO, PEDOMETER_LOG_TAG, "state is %s (%d)", state,
